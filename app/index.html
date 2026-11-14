@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eifel Fire Radar</title>
+  <meta name="description" content="NISAR radar shows what changed in the Hürtgenwald forest around the August 2026 fire. A NASA Space Apps Challenge 2026 project, Dancing with the SARs.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="lib/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ============================================================ top bar -->
+  <header class="top">
+    <div class="brand">
+      <h1>Eifel Fire Radar</h1>
+      <p class="sub">NASA Space Apps 2026 · Dancing with the SARs</p>
+    </div>
+    <nav class="seg" aria-label="Mode">
+      <button type="button" id="mode-explore" aria-pressed="true">Explore</button>
+      <button type="button" id="mode-learn" aria-pressed="false">Learn</button>
+    </nav>
+    <button type="button" class="link" id="open-about">About</button>
+  </header>
+
+  <main class="stage" id="stage">
+    <div id="map" aria-label="Map of the study area"></div>
+
+    <!-- ============================================================ left card: layers (Explore) or steps (Learn) -->
+    <aside class="card panel" id="panel">
+      <button type="button" class="panel-head" id="panel-toggle" aria-expanded="true" aria-controls="panel-body">
+        <span class="panel-title" id="panel-title">Layers</span>
+        <span class="panel-mini" id="panel-mini"></span>
+        <svg class="chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="panel-body" id="panel-body">
+        <div id="layers" role="radiogroup" aria-label="Map layer"><!-- filled by app.js --></div>
+
+        <section id="learn" hidden>
+          <article id="learn-step" class="learn-step" aria-live="polite"></article>
+          <div class="learn-nav">
+            <button type="button" class="btn" id="learn-prev">Back</button>
+            <div class="dots" id="learn-dots" aria-hidden="true"></div>
+            <button type="button" class="btn btn-primary" id="learn-next">Next</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <!-- ============================================================ compare: one button, one date -->
+    <div class="compare" id="compare">
+      <button type="button" class="pill" id="cmp-btn" aria-pressed="false">Compare</button>
+      <label class="pill pill-select" id="cmp-with" hidden>
+        <span>with</span>
+        <select id="cmp-date" aria-label="Date to compare with"></select>
+      </label>
+    </div>
+
+    <!-- compare line on the map -->
+    <div class="swipe" id="swipe" hidden>
+      <div class="swipe-line"></div>
+      <span class="swipe-tag swipe-tag-l" id="swipe-l"></span>
+      <span class="swipe-tag swipe-tag-r" id="swipe-r"></span>
+      <button type="button" class="swipe-handle" id="swipe-handle"
+              role="slider" aria-label="Compare line: left the earlier date, right the later date"
+              aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M9 6 L3 12 L9 18 M15 6 L21 12 L15 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ============================================================ time -->
+    <footer class="card time">
+      <div class="time-now">
+        <strong id="now-date"></strong>
+        <span id="now-note"></span>
+      </div>
+      <div class="timeline" id="timeline">
+        <div class="tl-line"></div>
+        <div class="tl-fire" id="tl-fire"><span id="tl-fire-label"></span></div>
+        <div class="tl-stops" id="tl-stops"></div>
+        <div class="tl-ref" id="tl-ref" hidden></div>
+        <div class="tl-handle" id="tl-handle" role="slider" tabindex="0" aria-label="Date shown" aria-valuemin="0"></div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ============================================================ about -->
+  <dialog id="about" aria-labelledby="about-title">
+    <div class="dialog-head">
+      <h2 id="about-title">About this map</h2>
+      <button type="button" class="btn" id="close-about">Close</button>
+    </div>
+    <div class="dialog-body" id="about-body"><!-- filled by app.js from the metadata --></div>
+  </dialog>
+
+  <div id="load-error" class="load-error" hidden></div>
+
+  <script src="lib/leaflet.js"></script>
+  <!-- Data is loaded with <script> tags (works from file://). app.js tries these folders in order. -->
+  <script>window.LAYER_DIRS = ["layers_series_all", "layers_series"];</script>
+  <script src="app.js"></script>
+</body>
+</html>
