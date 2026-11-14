@@ -30,6 +30,7 @@
     viridis: ["#440154", "#472d7b", "#3b528b", "#2c728e", "#21918c", "#28ae80", "#5ec962", "#addc30", "#fde725"],
     inferno: ["#000004", "#1b0c41", "#4a0c6b", "#781c6d", "#a52c60", "#cf4446", "#ed6925", "#fb9b06", "#f7d13d", "#fcffa4"],
     veg: ["#7a3b0a", "#b8792c", "#e3c878", "#f4f1b5", "#a6d96a", "#3fa34d", "#0b6b2e", "#00441b"],
+    change: ["#ffffff", "#fde0dc", "#f7a8a2", "#e5484d", "#b3202c", "#6b0f1a"],   // no change -> strong loss
     moist: ["#8c510a", "#d8b365", "#f6e8c3", "#c7eae5", "#5ab4ac", "#2171b5", "#08306b"],
   };
   const hex2rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -118,8 +119,8 @@
       }
       if (!dir) continue;                       // region not built yet: simply not offered
       // optional extras: each one simply switches a feature on
-      window.NISAR_STABLE = window.NISAR_DAMAGE = window.NISAR_MOISTURE = null;
-      for (const f of ["stable.js", "damage.js", "moisture_meta.js"]) {
+      window.NISAR_STABLE = window.NISAR_DAMAGE = window.NISAR_MOISTURE = window.NISAR_VEGETATION = null;
+      for (const f of ["stable.js", "damage.js", "moisture_meta.js", "vegetation.js"]) {
         try { await loadScript(`${dir}/${f}`); } catch (e) { /* not there: fine */ }
       }
       let perimeter = null;                     // fetch() only works over http(s), not from file://
@@ -130,7 +131,7 @@
         } catch (e) { /* no perimeter */ }
       }
       regions.push(Object.assign({}, r, { dir, data: {
-        META: window.NISAR_SERIES, STABLE: window.NISAR_STABLE || null,
+        META: window.NISAR_SERIES, STABLE: window.NISAR_STABLE || null, VEG: window.NISAR_VEGETATION || null,
         DAMAGE: window.NISAR_DAMAGE || null, MOIST: window.NISAR_MOISTURE || null, PERIMETER: perimeter,
       } }));
     }
@@ -158,7 +159,7 @@
   function init(REGION, REGIONS, switchRegion) {
     const DIR = REGION.dir;
     const RID = REGION.id;
-    const { META, DAMAGE, MOIST, PERIMETER, STABLE } = REGION.data;
+    const { META, DAMAGE, MOIST, PERIMETER, STABLE, VEG } = REGION.data;
     const radar = META.scenes;
     const N = radar.length;
     const baseIdx = Math.max(0, radar.findIndex((s) => s.date === META.baseline));
@@ -197,12 +198,23 @@
       { id: "forest", set: "radar", name: "Forest", sub: "Where trees stand", file: (s) => radarFile(s, s.hv),
         band: { chan: steady ? 1 : 0, enc: DBR.HV, range: [-22, -8], pal: "viridis" }, lo: "open land", hi: "dense forest",
         text: "The radar pulse bounces between branches and part of it comes back. More trees, stronger echo. Burned or cleared forest turns dark. Trees do not grow in weeks, so the map never shows more forest than before the fire." },
+      /* Change: every place against ITSELF before the fire (the forest image of the date shown minus the one of the
+       * last date before the fire). Land that was already open stays white instead of looking "burned". */
+      { id: "change", set: "radar", change: true, name: "Change", sub: `Forest echo since ${fmtDate(base.date)}`,
+        file: (s) => radarFile(s, s.hv),
+        band: { range: [-META.diff_range_db, 0], pal: "change" }, lo: "no change", hi: `strong loss (−${META.diff_range_db} dB)`,
+        text: `Each place is compared with itself: its forest echo on the date shown against ${fmtDateLong(base.date)}, the last image before the fire. White means unchanged (or stronger), so land that was already open before the fire stays white. The redder, the more of the canopy echo is gone; ${THR} dB less, about ${Math.round((1 - Math.pow(10, -THR / 10)) * 100)} %, is where "loss" starts.` },
       { id: "surface", set: "radar", name: "Ground and buildings", sub: "Hard and rough surfaces", file: (s) => radarFile(s, s.composite),
         band: { chan: 0, enc: DBR.HH, range: [-17, -1], pal: "inferno" }, lo: "smooth ground", hi: "rough ground, buildings",
         text: "Smooth ground mirrors the radar pulse away and stays dark. Walls and rough or wet ground send it back and glow." },
       { id: "vegetation", set: "radar", name: "Vegetation", sub: "How much plant cover", file: (s) => radarFile(s, s.composite),
-        band: { chan: 2, enc: DBR.ratio, range: [0.2, 1.2], pal: "veg", value: rviOf }, lo: "bare", hi: "lush",
-        text: "Compares the echo from plants with the echo from the ground. Green means a lot of woody vegetation, brown means little." },
+        // with vegetation.js (scripts/make_vegetation.py) the scale starts at the burned forest, and buildings,
+        // which have the lowest index of all, are painted in a neutral grey off the scale
+        band: { chan: 2, enc: DBR.ratio, range: [VEG ? VEG.rvi_burned : 0.2, 1.2], pal: "veg", value: rviOf },
+        lo: VEG ? "burned forest" : "bare", hi: "lush",
+        text: VEG
+          ? `Compares the echo from plants with the echo from the ground. Green means a lot of woody vegetation. The scale starts at the burned forest (its lowest value after the fire, on ${fmtDate(VEG.rvi_burned_date)}); bare fields and roads look the same. Buildings are not on the scale: they are grey.`
+          : "Compares the echo from plants with the echo from the ground. Green means a lot of woody vegetation, brown means little." },
       { id: "moisture", set: "moisture", name: "Moisture", sub: "Water in the soil", file: (s) => s.file,
         band: moist ? { chan: 0, enc: moist.range, range: moist.range, pal: "moist" } : null, lo: "dry", hi: "wet",
         text: "How much water the top soil holds. Dry soil and dry plants burn more easily. Under dense forest the satellite cannot measure it, so there are gaps." },
@@ -227,7 +239,7 @@
     const scenes = () => curSet().scenes;
     const nearest = (list, date) => list.reduce((b, s, i) =>
       (Math.abs(dayNum(s.date) - dayNum(date)) < Math.abs(dayNum(list[b].date) - dayNum(date)) ? i : b), 0);
-    const comparing = () => state.cmp && !state.loss && scenes().length > 1;
+    const comparing = () => state.cmp && !state.loss && !layerById(state.layer).change && scenes().length > 1;
 
     // ------------------------------------------------------------------- filters
     /* Colour composite (Learn): HH (red channel) and HV (green channel) are mixed so that three typical
@@ -271,6 +283,7 @@
     const map = L.map("map", { zoomSnap: 0.25, zoomControl: false, minZoom: 5, maxZoom: 18 });
     app = { map, onKey: null };
     L.control.zoom({ position: "bottomright" }).addTo(map);
+    L.control.scale({ position: "bottomright", imperial: false, maxWidth: 140 }).addTo(map);   // sits above the zoom buttons
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -310,6 +323,29 @@
         <image href="${url(base.hv)}" width="${IW}" height="${IH}" preserveAspectRatio="none" opacity="0.5" filter="${invert}"/>
       </g>`;
     const lossOverlay = L.svgOverlay(lossSvg, bounds, { pane: "afterPane" });
+
+    /* Change layer: same mixing trick as the loss view, on the forest channel of the images the layers use.
+     * The table maps the difference to white (no change) ... dark red (diff_range_db or more lost). */
+    const FCH = [0, 0, 0, 0, 0]; FCH[steady ? 1 : 0] = 1;
+    const invertForest = tableFilter("f-invf-" + RID, FCH, (v) => [1 - v, 1 - v, 1 - v], false);
+    const changeFilter = tableFilter("f-change-" + RID, FCH, (v) => {
+      const d = changeOf(v);
+      return palColor(PALETTES.change, -d / META.diff_range_db);
+    }, false);
+    const changeSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    changeSvg.setAttribute("viewBox", `0 0 ${IW} ${IH}`);
+    changeSvg.setAttribute("preserveAspectRatio", "none");
+    changeSvg.innerHTML = `<g filter="${changeFilter}">
+        <image class="later" href="${url(radarFile(base, base.hv))}" width="${IW}" height="${IH}" preserveAspectRatio="none"/>
+        <image href="${url(radarFile(base, base.hv))}" width="${IW}" height="${IH}" preserveAspectRatio="none" opacity="0.5" filter="${invertForest}"/>
+      </g>`;
+    changeSvg.style.opacity = "0.9";
+    const changeOverlay = L.svgOverlay(changeSvg, bounds, { pane: "afterPane" });
+    // open water (vegetation.js): the layer colours mean nothing there, so it is painted blue-grey on every layer
+    const waterOverlay = VEG && VEG.water
+      ? L.imageOverlay(url(VEG.water), bounds, { pane: "topPane", interactive: false, alt: "" }).addTo(map) : null;
+    const buildingsOverlay = VEG && VEG.buildings
+      ? L.imageOverlay(url(VEG.buildings), bounds, { pane: "topPane", interactive: false, alt: "" }) : null;
     const outlineOverlay = DAMAGE && DAMAGE.outline
       ? L.imageOverlay(url(DAMAGE.outline), bounds, { pane: "topPane", interactive: false, alt: "" }) : null;
 
@@ -404,6 +440,8 @@
           </button>` + (sel ? `<div class="layer-detail">
             <div class="ramp" style="background:${cssRamp(PALETTES[l.band.pal])}"></div>
             <div class="ramp-labels"><span>${esc(l.lo)}</span><span>${esc(l.hi)}</span></div>
+            ${l.id === "vegetation" && buildingsOverlay ? `<div class="key"><i style="background:${VEG.buildings_colour}"></i>Buildings, not on the scale</div>` : ""}
+            ${waterOverlay ? `<div class="key"><i style="background:${VEG.water_colour}"></i>Water, not on the scale</div>` : ""}
             <p>${esc(l.text)}</p>
           </div>` : "");
       }).join("");
@@ -495,10 +533,14 @@
 
       // map: the shown date; while comparing: earlier date left of the line, later date right of it
       if (state.loss) {
-        afterOverlay.remove();
+        afterOverlay.remove(); changeOverlay.remove();
         if (!map.hasLayer(lossOverlay)) lossOverlay.addTo(map);
+      } else if (layer.change) {
+        afterOverlay.remove(); lossOverlay.remove();
+        changeSvg.querySelector(".later").setAttribute("href", url(layer.file(cur)));
+        if (!map.hasLayer(changeOverlay)) changeOverlay.addTo(map);
       } else {
-        lossOverlay.remove();
+        lossOverlay.remove(); changeOverlay.remove();
         if (!map.hasLayer(afterOverlay)) afterOverlay.addTo(map);
         afterOverlay.setBounds(set.bounds);
         afterOverlay.setUrl(url(layer.file(T)));
@@ -517,11 +559,14 @@
       if (outlineOverlay) {
         if (state.outline) outlineOverlay.addTo(map); else outlineOverlay.remove();
       }
+      if (buildingsOverlay) {
+        if (layer.id === "vegetation" && !state.loss) buildingsOverlay.addTo(map); else buildingsOverlay.remove();
+      }
 
       renderPanel();
 
       // compare control
-      $("compare").hidden = state.mode === "learn" || list.length < 2;
+      $("compare").hidden = state.mode === "learn" || list.length < 2 || !!layer.change;
       $("cmp-btn").setAttribute("aria-pressed", String(state.cmp));
       $("cmp-with").hidden = !state.cmp;
       const sel = $("cmp-date");
@@ -549,6 +594,9 @@
       ha: DAMAGE.area_ha,
       mean: radar.map((s) => DAMAGE.mean_hv_db[s.date]),
       bounds: L.latLngBounds([[DAMAGE.bbox[1], DAMAGE.bbox[0]], [DAMAGE.bbox[3], DAMAGE.bbox[2]]]),
+      // the compare line goes through the largest damaged patch (with many patches the bbox centre can be off the burn)
+      focus: DAMAGE.patches && DAMAGE.patches.length ? L.latLng(DAMAGE.patches[0].center)
+        : L.latLngBounds([[DAMAGE.bbox[1], DAMAGE.bbox[0]], [DAMAGE.bbox[3], DAMAGE.bbox[2]]]).getCenter(),
     } : null;
     const preIdx = radar.map((s, i) => i).filter((i) => dayNum(radar[i].date) < fireStart);
     const areaPre = AREA && preIdx.length ? preIdx.reduce((a, i) => a + AREA.mean[i], 0) / preIdx.length : null;
@@ -627,7 +675,7 @@
       if (!AREA) { fitAll(); return; }
       untouched = false;
       if (centreLine) {
-        map.once("moveend", () => setSwipe(map.latLngToContainerPoint(AREA.bounds.getCenter()).x / map.getSize().x));
+        map.once("moveend", () => setSwipe(map.latLngToContainerPoint(AREA.focus).x / map.getSize().x));
       }
       // never fly further out than the data: a large damaged area would otherwise show half the country
       const t = AREA.bounds.pad(pad);
@@ -770,7 +818,17 @@
         <ul>
           <li><strong>Forest</strong> is the HV backscatter (sent horizontally, received vertically): the echo from inside tree crowns.</li>
           <li><strong>Ground and buildings</strong> is the HH backscatter: the echo from surfaces and corners.</li>
-          <li><strong>Vegetation</strong> is the radar vegetation index RVI = 4·HV / (HH + HV). A relative index, not biomass in t/ha.</li>
+          <li><strong>Change</strong> compares every place with itself: the Forest echo of the date shown minus that of
+            ${fmtDateLong(base.date)}, the last image before the fire. White is unchanged or stronger, red is weaker, full red at
+            −${META.diff_range_db} dB.</li>
+          <li><strong>Vegetation</strong> is the radar vegetation index RVI = 4·HV / (HH + HV). A relative index, not biomass in t/ha.${VEG
+            ? ` Here the colour scale starts at the burned forest (mean RVI ${VEG.rvi_burned.toFixed(2)} of the damaged area on
+              ${fmtDateLong(VEG.rvi_burned_date)}; ${VEG.rvi_damage_area_before.toFixed(2)} before the fire). Buildings are grey and
+              not on the scale: ${esc(VEG.buildings_method)} (${VEG.buildings_share_percent} % of the area, <code>scripts/make_vegetation.py</code>).
+              ${REGION.buildingsCheck || ""}`
+            : ""}</li>
+          ${VEG && VEG.water ? `<li><strong>Water</strong> (blue-grey on every layer, ${VEG.water_share_percent} % of the area): ${esc(VEG.water_method)}.
+            The layer colours mean nothing on water, so it is not coloured.</li>` : ""}
           <li><strong>Moisture</strong> is NISAR soil moisture (SME2), ${moist
             ? `${moist.scenes.length} scenes, ${esc(moist.quality || "")}. It is soil moisture, not fuel moisture.`
             : `not exported yet. Run <code>forest_watch_api/scripts/sme2_layers.py</code> with an Earthdata login.`}</li>

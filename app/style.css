@@ -46,6 +46,8 @@ button { cursor: pointer; }
 .leaflet-bar { border: 0 !important; border-radius: 12px !important; box-shadow: var(--shadow) !important; overflow: hidden; }
 .leaflet-bar a { width: 40px !important; height: 40px !important; line-height: 40px !important; color: var(--ink) !important; border-color: var(--line) !important; }
 .leaflet-bottom.leaflet-right { bottom: 124px; right: 6px; }
+.leaflet-control-scale { margin-bottom: 8px !important; }
+.leaflet-control-scale-line { border: 2px solid var(--ink); border-top: 0; background: rgba(255, 255, 255, 0.85); color: var(--ink); font-size: 11px; font-weight: 600; line-height: 1.5; padding: 0 6px; }
 
 .card { position: absolute; z-index: 800; background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow); }
 
@@ -74,6 +76,8 @@ button { cursor: pointer; }
 .layer-detail { padding: 2px 10px 12px 34px; font-size: 13px; color: var(--muted); }
 .ramp { height: 10px; border-radius: 5px; margin: 4px 0; }
 .ramp-labels { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--ink); margin-bottom: 8px; }
+.key { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink); margin: -2px 0 8px; }
+.key i { width: 14px; height: 10px; border-radius: 2px; }
 
 /* ------------------------------------------------------------ learn (inside the left card) */
 .learn-step { padding: 0 8px; }
