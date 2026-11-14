@@ -1,0 +1,22 @@
+// Example OpenUI Lang produced by your LLM after a user asks for NISAR scenes.
+// The Renderer must receive forestWatchToolProvider as its `toolProvider` prop.
+
+search = Query("search_nisar", {
+  bbox: [6.37, 50.72, 6.45, 50.77],
+  start: "2026-08-01",
+  end: "2026-08-31",
+  max_results: 25
+}, {count: 0, scenes: []})
+
+sceneTable = Table([
+  Col("Granule ID", search.scenes.granule_id),
+  Col("Acquisition", search.scenes.start_time),
+  Col("Direction", search.scenes.direction),
+  Col("Maturity", search.scenes.data_maturity)
+])
+
+root = Stack([
+  TextContent("NISAR-Aufnahmen im Hürtgenwald", "large-heavy"),
+  TextContent("Gefundene Aufnahmen: " + search.count),
+  sceneTable
+])

@@ -1,0 +1,10 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+asf-search>=14.1,<15
+h5py>=3.11,<4
+fsspec[http]>=2024.6
+aiohttp>=3.9,<4
+numpy>=1.26,<3
+pyproj>=3.6,<4
+python-dotenv>=1.0,<2
+pydantic>=2.7,<3
