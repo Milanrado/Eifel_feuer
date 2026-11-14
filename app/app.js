@@ -630,9 +630,9 @@
     // local time in the study areas is UTC+2 in summer: before 12 UTC reads as morning
     const daylight = +timeUTC.slice(0, 2) < 12 ? "before or around sunrise" : "in the evening";
     const SVG_RADAR = `
-      <svg viewBox="0 0 300 150" role="img" aria-label="A satellite sends microwave pulses through clouds and smoke to the forest and receives the echo">
+      <svg viewBox="0 0 300 150" role="img" aria-label="The NISAR satellite sends radio pulses through clouds and smoke to the forest and receives the echo">
         <rect x="18" y="12" width="26" height="14" fill="#111827"/><rect x="2" y="16" width="14" height="6" fill="#6b7280"/><rect x="46" y="16" width="14" height="6" fill="#6b7280"/>
-        <text x="66" y="24" font-size="10" fill="#111827">NISAR</text>
+        <text x="66" y="24" font-size="10" fill="#111827">NISAR satellite</text>
         <path d="M40 30 L190 112" stroke="#111827" stroke-width="1.5" stroke-dasharray="6 4"/>
         <path d="M200 106 L56 30" stroke="#e5484d" stroke-width="1.5" marker-end="url(#ah)"/>
         <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#e5484d"/></marker></defs>
@@ -645,22 +645,31 @@
       </svg>`;
     const SVG_HH = `
       <svg viewBox="0 0 300 130" role="img" aria-label="HH: smooth surfaces reflect the pulse away, buildings send it back">
+        <defs>
+          <marker id="ah-hh-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#111827"/></marker>
+          <marker id="ah-hh-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#e5484d"/></marker>
+        </defs>
         <path d="M0 110 H300" stroke="#111827"/>
         <text x="10" y="18" font-size="10">smooth field: mirrored away</text>
-        <path d="M20 30 L70 108 L120 30" fill="none" stroke="#111827" stroke-width="1.5"/>
+        <path d="M20 30 L70 110 L120 30" fill="none" stroke="#111827" stroke-width="1.5" marker-end="url(#ah-hh-b)"/>
         <text x="170" y="18" font-size="10">building: corner bounce</text>
         <rect x="230" y="60" width="40" height="50" fill="#d1d5db" stroke="#111827"/>
-        <path d="M160 40 L222 102 L230 102 L230 94 L168 32" fill="none" stroke="#e5484d" stroke-width="1.5"/>
-        <text x="150" y="58" font-size="10" fill="#e5484d">strong echo</text>
+        <path d="M152 40 L222 110" fill="none" stroke="#111827" stroke-width="1.5"/>
+        <path d="M222 110 L230 102 L160 32" fill="none" stroke="#e5484d" stroke-width="1.5" marker-end="url(#ah-hh-r)"/>
+        <text x="186" y="42" font-size="10" fill="#e5484d">strong echo</text>
       </svg>`;
     const SVG_HV = `
-      <svg viewBox="0 0 300 140" role="img" aria-label="HV: inside a tree crown the wave is scattered many times and comes back rotated">
+      <svg viewBox="0 0 300 140" role="img" aria-label="HV: inside a tree crown the wave bounces many times and comes back twisted upright">
+        <defs>
+          <marker id="ah-hv-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#111827"/></marker>
+          <marker id="ah-hv-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#e5484d"/></marker>
+        </defs>
         <path d="M0 128 H300" stroke="#111827"/>
         <path d="M150 128 V84" stroke="#111827" stroke-width="3"/>
         <circle cx="150" cy="64" r="40" fill="#fff" stroke="#111827"/>
         <path d="M130 50 L162 70 L138 82 L168 52" fill="none" stroke="#111827"/>
-        <path d="M40 16 L130 50" stroke="#111827" stroke-width="1.5"/>
-        <path d="M168 52 L262 16" stroke="#e5484d" stroke-width="1.5"/>
+        <path d="M40 16 L130 50" stroke="#111827" stroke-width="1.5" marker-end="url(#ah-hv-b)"/>
+        <path d="M168 52 L262 16" stroke="#e5484d" stroke-width="1.5" marker-end="url(#ah-hv-r)"/>
         <text x="20" y="34" font-size="10">sent: H</text>
         <path d="M30 40 h18" stroke="#111827" stroke-width="2"/>
         <text x="236" y="40" font-size="10" fill="#e5484d">back: V</text>
@@ -693,36 +702,54 @@
 
     const STEPS = [
       {
-        title: "How radar sees",
-        body: `<p>Cameras need sunlight. NISAR brings its own light: it sends microwave pulses
-            (L-band, about 24 cm wavelength) and records the echo. That works at night,
-            and the long waves pass through clouds and smoke.</p>
-          <p>All ${N} radar images here come from the same orbit track, recorded at about ${esc(timeUTC)} UTC,
-            ${daylight}.</p>`,
+        title: "How the satellite sees",
+        body: `<p>Regular satellites work like a phone camera: they need sunlight, and clouds or
+            wildfire smoke block their view.</p>
+          <p>The <strong>NISAR</strong> satellite works more like a bat using echoes. It beams invisible
+            radio pulses down to Earth and listens for what bounces back—even in the dark. Each wave is
+            about the length of a ruler (24 cm), so it glides right past tiny smoke and cloud particles
+            to reach the trees below.</p>
+          <p>All ${N} snapshots come from the exact same spot in orbit (around ${esc(timeUTC)} UTC,
+            ${daylight}) for a fair before-and-after comparison.</p>`,
         svg: SVG_RADAR,
-        hint: `The image is the radar echo of ${fmtDateLong(base.date)}, the last image before the fire.
-          Yellow means a strong echo, dark purple a weak one.`,
+        hint: `<p>This <b>HV</b> image from ${fmtDateLong(base.date)} (right before the fire) shows
+          <b>twisted echoes</b>.</p>
+          <p>The satellite sends a sideways wave (<b>H</b>) and listens for echoes bounced back
+          upright (<b>V</b>). Only tangled tree crowns scramble the wave enough to do this—so
+          <b>green to yellow</b> is forest and <b>dark purple</b> is open ground (more in Step 2).</p>`,
+        apply() { show({ layer: "forest", idx: baseIdx }); fitAll(); },
+      },
+      {
+        title: "HV: the tree-crown detector",
+        body: `<p>Remember <strong>HV</strong> from Step 1—sending a sideways wave (<strong>H</strong>)
+            and listening for echoes twisted upright (<strong>V</strong>)?</p>
+          <p>Flat ground and walls bounce waves cleanly without twisting them. Inside a tree crown,
+            though, the wave pinballs off branches and leaves pointing in every direction, scrambling
+            some of the echo upright.</p>
+          <p>That turns <strong>HV</strong> into a <strong>3D canopy detector</strong>. When a wildfire
+            burns away the branches and foliage, less stays behind to twist the wave—so the
+            <strong>HV</strong> echo drops. In Explore this is the layer "Forest".</p>`,
+        svg: SVG_HV,
+        hint: `<p>This is the same <b>HV</b> view from ${fmtDateLong(base.date)} (before the fire).</p>
+          <p><b>Green to yellow patches</b> are dense forest crowns scrambling lots of signal back.
+          <b>Dark purple blocks</b> are flat fields and meadows with no tangled branches to twist the wave.</p>`,
         apply() { show({ layer: "forest", idx: baseIdx }); fitAll(); },
       },
       {
         title: "HH: the surface echo",
-        body: `<p>HH means: sent with horizontal waves, received horizontally. Smooth ground mirrors
-            the pulse away and looks dark. Walls and ground form a corner that throws it straight back,
-            so buildings look very bright.</p>
-          <p>In Explore this is the layer "Ground and buildings".</p>`,
+        body: `<p>Unlike <strong>HV</strong> (twisted echoes), <strong>HH</strong> listens for echoes
+            that come back the same way they were sent—sideways (<strong>H</strong> sent,
+            <strong>H</strong> received). That makes it sensitive to solid surfaces.</p>
+          <p><strong>Smooth ground</strong> acts like a mirror on the floor: a radar beam hitting it
+            at an angle glances away into space, so flat fields send little back.</p>
+          <p><strong>Buildings</strong> act like a bicycle reflector: the beam bounces off the ground
+            into a wall and shoots straight back to the satellite as a bright flash. In Explore this is
+            the layer "Ground and buildings".</p>`,
         svg: SVG_HH,
-        hint: "The brightest yellow spots are villages and buildings, where HH is strongest. Smooth fields are dark.",
+        hint: `<p>Switched to the <b>HH</b> surface view ("Ground and buildings").</p>
+          <p>The <b>bright yellow spots</b> are villages and buildings bouncing strong <b>HH</b> echoes
+          straight back. Smooth fields mirror most of the beam away, so they stay dark purple.</p>`,
         apply() { show({ layer: "surface", idx: baseIdx }); fitAll(); },
-      },
-      {
-        title: "HV: the canopy echo",
-        body: `<p>HV means: sent horizontally, received vertically. Only a tangle of branches and leaves
-            scatters the wave so often that it comes back rotated. So HV measures volume, mostly
-            forest canopy.</p>
-          <p>When a fire destroys the crowns, the HV echo gets weaker. In Explore this is the layer "Forest".</p>`,
-        svg: SVG_HV,
-        hint: "Green to yellow is forest. The dark purple blocks are fields and meadows with little volume.",
-        apply() { show({ layer: "forest", idx: baseIdx }); fitAll(); },
       },
       {
         title: "Colour composite",
