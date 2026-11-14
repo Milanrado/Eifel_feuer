@@ -16,7 +16,9 @@
   const dayNum = (d) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 864e5;
   const fmtDate = (d) => `${+d.slice(8, 10)} ${MONTHS[+d.slice(5, 7) - 1]}`;
   const fmtDateLong = (d) => `${fmtDate(d)} ${d.slice(0, 4)}`;
-  const fmtNum = (x, digits = 1) => (x == null ? "n/a" : x.toFixed(digits).replace("-", "−"));
+  // large numbers (hectares of a big fire) get thousands separators and no decimals: 19,401
+  const fmtNum = (x, digits = 1) => (x == null ? "n/a"
+    : (Math.abs(x) >= 1000 ? Math.round(x).toLocaleString("en-US") : x.toFixed(digits)).replace("-", "−"));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const clamp01 = (x) => Math.min(1, Math.max(0, x));
   const DB_HELP = `Scientists count echo strength in decibels (dB). One rule is enough: 3 dB less means half the echo,
@@ -101,36 +103,62 @@
   }
 
   // ======================================================================= boot
+  /* Every region is one data folder (gcov_change.py series). The data arrive as <script> globals,
+   * so each load is captured into the region object right away, before the next region overwrites it. */
   async function boot() {
-    let dir = null;
-    for (const d of window.LAYER_DIRS || []) {
-      try {
-        await loadScript(`${d}/series_meta.js`);
-        if (window.NISAR_SERIES) { dir = d; break; }
-      } catch (e) { /* try the next folder */ }
+    const regions = [];
+    for (const r of window.REGIONS || []) {
+      let dir = null;
+      for (const d of r.dirs || []) {
+        try {
+          window.NISAR_SERIES = null;
+          await loadScript(`${d}/series_meta.js`);
+          if (window.NISAR_SERIES) { dir = d; break; }
+        } catch (e) { /* try the next folder */ }
+      }
+      if (!dir) continue;                       // region not built yet: simply not offered
+      // optional extras: each one simply switches a feature on
+      window.NISAR_STABLE = window.NISAR_DAMAGE = window.NISAR_MOISTURE = null;
+      for (const f of ["stable.js", "damage.js", "moisture_meta.js"]) {
+        try { await loadScript(`${dir}/${f}`); } catch (e) { /* not there: fine */ }
+      }
+      let perimeter = null;                     // fetch() only works over http(s), not from file://
+      if (r.perimeter) {
+        try {
+          const resp = await fetch(r.perimeter);
+          if (resp.ok) perimeter = await resp.json();
+        } catch (e) { /* no perimeter */ }
+      }
+      regions.push(Object.assign({}, r, { dir, data: {
+        META: window.NISAR_SERIES, STABLE: window.NISAR_STABLE || null,
+        DAMAGE: window.NISAR_DAMAGE || null, MOIST: window.NISAR_MOISTURE || null, PERIMETER: perimeter,
+      } }));
     }
-    if (!dir) {
+    if (!regions.length) {
       const box = $("load-error");
       box.innerHTML = "<strong>No data found.</strong> Expected <code>series_meta.js</code> in one of: " +
-        esc((window.LAYER_DIRS || []).join(", ")) + ". Run <code>gcov_change.py series</code> first.";
+        esc((window.REGIONS || []).flatMap((r) => r.dirs || []).join(", ")) + ". Run <code>gcov_change.py series</code> first.";
       box.hidden = false;
       return;
     }
-    // optional extras: each one simply switches a feature on
-    for (const f of ["stable.js", "damage.js", "moisture_meta.js"]) {
-      try { await loadScript(`${dir}/${f}`); } catch (e) { /* not there: fine */ }
-    }
-    let perimeter = null;                       // fetch() only works over http(s), not from file://
-    try {
-      const r = await fetch("data/perimeter.geojson");
-      if (r.ok) perimeter = await r.json();
-    } catch (e) { /* no perimeter */ }
+    // arrows etc. go to the running instance (regions swap the instance, the listener stays)
+    document.addEventListener("keydown", (e) => { if (app && app.onKey) app.onKey(e); });
+    const want = (location.hash.match(/r=([\w-]+)/) || [])[1];
+    openRegion(regions, regions.find((r) => r.id === want) || regions[0], false);
+  }
 
-    init(dir, window.NISAR_SERIES, window.NISAR_DAMAGE || null, window.NISAR_MOISTURE || null, perimeter, window.NISAR_STABLE || null);
+  let app = null;                               // the running instance: { map, onKey }
+  function openRegion(regions, region, setHash) {
+    if (app) { app.map.remove(); app = null; }  // tears down the old map and all its listeners
+    if (setHash) { try { history.replaceState(null, "", "#r=" + region.id); } catch (e) { /* file:// quirks */ } }
+    init(region, regions, (r) => openRegion(regions, r, true));
   }
 
   // ======================================================================= app
-  function init(DIR, META, DAMAGE, MOIST, PERIMETER, STABLE) {
+  function init(REGION, REGIONS, switchRegion) {
+    const DIR = REGION.dir;
+    const RID = REGION.id;
+    const { META, DAMAGE, MOIST, PERIMETER, STABLE } = REGION.data;
     const radar = META.scenes;
     const N = radar.length;
     const baseIdx = Math.max(0, radar.findIndex((s) => s.date === META.baseline));
@@ -215,7 +243,7 @@
         [(v1 - v2) / det, (h2 - h1) / det, (h1 * v2 - h2 * v1) / det],
       ];
       const cols = COMP_COLOURS.map(hex2rgb);
-      return matrixFilter("f-comp", [0, 1, 2].map((k) => {
+      return matrixFilter("f-comp-" + RID, [0, 1, 2].map((k) => {
         const m = [0, 1, 2].map((j) => cols[0][k] * inv[0][j] + cols[1][k] * inv[1][j] + cols[2][k] * inv[2][j]);
         return [m[0], m[1], 0, m[2]];
       }));
@@ -224,7 +252,7 @@
       if (!layer.band) return compositeFilter();
       const b = layer.band;
       const row = [0, 0, 0, 0, 0]; row[b.chan] = 1;
-      return tableFilter(`f-${layer.id}`, row, (v) => {
+      return tableFilter(`f-${RID}-${layer.id}`, row, (v) => {
         const x = b.enc[0] + v * (b.enc[1] - b.enc[0]);
         const val = b.value ? b.value(x) : x;
         return palColor(PALETTES[b.pal], (val - b.range[0]) / (b.range[1] - b.range[0]));
@@ -233,14 +261,15 @@
     /* Strong loss (Learn): the later forest image at full strength, the inverted earlier one on top at 50 %.
      * That mix is v = 0.5 + (later - earlier) / 2 in grey levels; a table marks drops beyond the threshold. */
     const changeOf = (v) => (v - 0.5) * 2 * (DBR.HV[1] - DBR.HV[0]);
-    const lossFilter = () => tableFilter("f-loss", [1, 0, 0, 0, 0], (v) => {
+    const lossFilter = () => tableFilter("f-loss-" + RID, [1, 0, 0, 0, 0], (v) => {
       const d = changeOf(v);
       const c = hex2rgb(d <= -2 * THR ? "#7a0019" : "#e5484d");
       return [c[0], c[1], c[2], d <= -THR ? 1 : 0];
     }, true);
 
     // ------------------------------------------------------------------- map
-    const map = L.map("map", { zoomSnap: 0.25, zoomControl: false, minZoom: 11, maxZoom: 18 });
+    const map = L.map("map", { zoomSnap: 0.25, zoomControl: false, minZoom: 5, maxZoom: 18 });
+    app = { map, onKey: null };
     L.control.zoom({ position: "bottomright" }).addTo(map);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -257,8 +286,8 @@
     // Until the user moves the map (or Learn flies somewhere), keep the whole study area in view when
     // the window size changes. This also repairs a first layout that happened in a hidden or tiny tab.
     let untouched = true;
-    map.getContainer().addEventListener("pointerdown", () => { untouched = false; });
-    map.getContainer().addEventListener("wheel", () => { untouched = false; }, { passive: true });
+    map.getContainer().onpointerdown = () => { untouched = false; };
+    map.getContainer().onwheel = () => { untouched = false; };
     map.on("resize", () => { if (untouched) map.fitBounds(bounds, padding()); });
     window.addEventListener("load", () => { map.invalidateSize(); if (untouched) map.fitBounds(bounds, padding()); }, { once: true });
 
@@ -272,7 +301,7 @@
     const afterOverlay = L.imageOverlay(url(base.hv), bounds, { pane: "afterPane", opacity: 0.9, alt: "" }).addTo(map);
 
     const [IW, IH] = META.image_size;
-    const invert = tableFilter("f-invert", [1, 0, 0, 0, 0], (v) => [1 - v, 1 - v, 1 - v], false);
+    const invert = tableFilter("f-invert-" + RID, [1, 0, 0, 0, 0], (v) => [1 - v, 1 - v, 1 - v], false);
     const lossSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     lossSvg.setAttribute("viewBox", `0 0 ${IW} ${IH}`);
     lossSvg.setAttribute("preserveAspectRatio", "none");
@@ -304,7 +333,7 @@
     }
     map.on("move zoom zoomend viewreset resize", updateClip);
     function setSwipe(frac) { state.swipe = Math.min(0.97, Math.max(0.03, frac)); updateClip(); }
-    swipeHandle.addEventListener("pointerdown", (e) => {
+    swipeHandle.onpointerdown = (e) => {
       e.preventDefault();
       swipeHandle.setPointerCapture(e.pointerId);
       stage.classList.add("dragging");
@@ -318,20 +347,29 @@
       swipeHandle.addEventListener("pointermove", move);
       swipeHandle.addEventListener("pointerup", up);
       swipeHandle.addEventListener("pointercancel", up);
-    });
-    swipeHandle.addEventListener("keydown", (e) => {
+    };
+    swipeHandle.onkeydown = (e) => {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
       e.stopPropagation();
       setSwipe(state.swipe + (e.key === "ArrowLeft" ? -0.05 : 0.05));
+    };
+
+    // ------------------------------------------------------------------- region switch (header)
+    const regEl = $("regions");
+    regEl.hidden = REGIONS.length < 2;
+    regEl.innerHTML = REGIONS.map((r) => `<button type="button" aria-pressed="${r.id === RID}"
+        title="${esc(r.title || r.name)}">${esc(r.name)}</button>`).join("");
+    regEl.querySelectorAll("button").forEach((b, i) => {
+      b.onclick = () => { if (REGIONS[i].id !== RID) switchRegion(REGIONS[i]); };
     });
 
     // ------------------------------------------------------------------- left card
-    $("panel-toggle").addEventListener("click", () => { state.open = !state.open; render(); });
-    $("layers").addEventListener("click", (e) => {
+    $("panel-toggle").onclick = () => { state.open = !state.open; render(); };
+    $("layers").onclick = (e) => {
       const b = e.target.closest(".layer");
       if (b && !b.disabled) setLayer(b.dataset.id);
-    });
+    };
     /** Switch layer. Layers with other dates (moisture) keep the nearest date. */
     function setLayer(id) {
       const old = scenes();
@@ -372,8 +410,8 @@
     }
 
     // ------------------------------------------------------------------- compare: one button, one date
-    $("cmp-btn").addEventListener("click", () => { state.cmp = !state.cmp; render(); });
-    $("cmp-date").addEventListener("change", (e) => { state.ref = +e.target.value; render(); });
+    $("cmp-btn").onclick = () => { state.cmp = !state.cmp; render(); };
+    $("cmp-date").onchange = (e) => { state.ref = +e.target.value; render(); };
 
     // ------------------------------------------------------------------- time line
     const allDates = radar.concat(moist ? moist.scenes : []).map((s) => dayNum(s.date));
@@ -420,7 +458,7 @@
       state.idx = i;
       render();
     }
-    timeline.addEventListener("pointerdown", (e) => {
+    timeline.onpointerdown = (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
       timeline.setPointerCapture(e.pointerId);
@@ -437,11 +475,11 @@
       timeline.addEventListener("pointermove", move);
       timeline.addEventListener("pointerup", up);
       timeline.addEventListener("pointercancel", up);
-    });
-    stopsEl.addEventListener("click", (e) => {                  // keyboard: Tab + Enter on a date
+    };
+    stopsEl.onclick = (e) => {                                  // keyboard: Tab + Enter on a date
       const b = e.target.closest(".tl-stop");
       if (b && e.detail === 0) setDate(+b.dataset.i);
-    });
+    };
 
     // ------------------------------------------------------------------- render
     const phaseText = (s) => (dayNum(s.date) < fireStart ? "before the fire" : dayNum(s.date) > fireEnd ? "after the fire" : "during the fire");
@@ -541,6 +579,8 @@
 
     // ------------------------------------------------------------------- learn mode
     const timeUTC = (base.time || "").slice(11, 16);
+    // local time in the study areas is UTC+2 in summer: before 12 UTC reads as morning
+    const daylight = +timeUTC.slice(0, 2) < 12 ? "before or around sunrise" : "in the evening";
     const SVG_RADAR = `
       <svg viewBox="0 0 300 150" role="img" aria-label="A satellite sends microwave pulses through clouds and smoke to the forest and receives the echo">
         <rect x="18" y="12" width="26" height="14" fill="#111827"/><rect x="2" y="16" width="14" height="6" fill="#6b7280"/><rect x="46" y="16" width="14" height="6" fill="#6b7280"/>
@@ -589,7 +629,11 @@
       if (centreLine) {
         map.once("moveend", () => setSwipe(map.latLngToContainerPoint(AREA.bounds.getCenter()).x / map.getSize().x));
       }
-      map.flyToBounds(AREA.bounds.pad(pad), Object.assign({ duration: 0.8 }, padding()));
+      // never fly further out than the data: a large damaged area would otherwise show half the country
+      const t = AREA.bounds.pad(pad);
+      const target = L.latLngBounds([[Math.max(t.getSouth(), S), Math.max(t.getWest(), W)],
+                                     [Math.min(t.getNorth(), Nn), Math.min(t.getEast(), E)]]);
+      map.flyToBounds(target, Object.assign({ duration: 0.8 }, padding()));
     }
     /** Learn steps set the whole map state; anything not named falls back to a plain single-date view. */
     function show(patch) {
@@ -606,7 +650,7 @@
             (L-band, about 24 cm wavelength) and records the echo. That works at night,
             and the long waves pass through clouds and smoke.</p>
           <p>All ${N} radar images here come from the same orbit track, recorded at about ${esc(timeUTC)} UTC,
-            before or around sunrise.</p>`,
+            ${daylight}.</p>`,
         svg: SVG_RADAR,
         hint: `The image is the radar echo of ${fmtDateLong(base.date)}, the last image before the fire.
           Yellow means a strong echo, dark purple a weak one.`,
@@ -651,7 +695,7 @@
         body: `<p>One image is not enough. Rain changes the echo everywhere, and single images are noisy.</p>
           <p>So we ask a strict question: where is the canopy echo clearly weaker than before the fire
             in at least ${DAMAGE.min_scenes} of the ${DAMAGE.post_scenes} images after it?
-            That leaves <strong>${fmtNum(AREA.ha)} ha</strong>, as big as ${Math.round(AREA.ha / PITCH_HA)} football pitches:
+            That leaves <strong>${fmtNum(AREA.ha)} ha</strong>, as big as ${Math.round(AREA.ha / PITCH_HA).toLocaleString("en-US")} football pitches:
             the black outline on the map.</p>
           <p class="muted" style="margin:0">Radar echo of that area, in % of normal:</p>
           ${areaBars(N - 1)}
@@ -690,8 +734,8 @@
       state.step = Math.max(0, Math.min(STEPS.length - 1, i));
       renderStep();
     }
-    $("learn-prev").addEventListener("click", () => goStep(state.step - 1));
-    $("learn-next").addEventListener("click", () => goStep(state.step + 1));
+    $("learn-prev").onclick = () => goStep(state.step - 1);
+    $("learn-next").onclick = () => goStep(state.step + 1);
 
     function setMode(mode) {
       state.mode = mode;
@@ -703,23 +747,24 @@
       show({ layer: layerById(state.layer).hidden ? "forest" : state.layer });
       fitAll();
     }
-    $("mode-explore").addEventListener("click", () => setMode("explore"));
-    $("mode-learn").addEventListener("click", () => setMode("learn"));
+    $("mode-explore").onclick = () => setMode("explore");
+    $("mode-learn").onclick = () => setMode("learn");
 
     // ------------------------------------------------------------------- about
     const dlg = $("about");
-    $("open-about").addEventListener("click", () => dlg.showModal());
-    $("close-about").addEventListener("click", () => dlg.close());
-    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    $("open-about").onclick = () => dlg.showModal();
+    $("close-about").onclick = () => dlg.close();
+    dlg.onclick = (e) => { if (e.target === dlg) dlg.close(); };
     $("about-body").innerHTML = aboutHtml();
 
     function aboutHtml() {
       const rows = radar.map((s, i) => `<tr><td>${s.date}</td><td>${(s.time || "").slice(11, 19)}</td>
           <td>${fmtNum(s.mean_hv_db, 2)}</td><td>${AREA ? fmtNum(AREA.mean[i], 2) : "n/a"}</td></tr>`).join("");
       return `
-        <p style="margin-top:14px">In August 2026 a forest fire burned in the Hürtgenwald near Aachen. The NISAR satellite of NASA and ISRO
+        <p style="margin-top:14px">${REGION.about || ""} The NISAR satellite of NASA and ISRO
           passes over every 12 days and measures the ground with radar, through clouds and smoke. This map shows
           what it saw before and after. Built for the NASA Space Apps Challenge 2026, challenge "Dancing with the SARs".</p>
+        <p style="margin-top:8px">Study area: ${esc(REGION.title || REGION.name)}.</p>
 
         <h3>The layers</h3>
         <ul>
@@ -734,8 +779,8 @@
         <h3>Data</h3>
         <p>NISAR Level-2 GCOV (L-band), provisional products, from the Alaska Satellite Facility DAAC
           (<a href="https://search.asf.alaska.edu/">search.asf.alaska.edu</a>). Study area ${W}–${E}° E, ${S}–${Nn}° N.
-          Fire window used here: ${fmtDateLong(META.fire.start)} to ${fmtDateLong(META.fire.end)}
-          <span class="placeholder">[PLACEHOLDER: official source for the fire dates]</span>.</p>
+          Fire window used here: ${fmtDateLong(META.fire.start)} to ${fmtDateLong(META.fire.end)}.
+          Source for the fire dates: ${REGION.fireSource || '<span class="placeholder">[PLACEHOLDER: official source for the fire dates]</span>'}.</p>
         <table><thead><tr><th>Date</th><th>UTC</th><th>Mean HV dB</th><th>HV in damaged area dB</th></tr></thead><tbody>${rows}</tbody></table>
         <details><summary>Granule IDs</summary><ul>${radar.map((s) => `<li><code>${esc(s.source)}</code></li>`).join("")}
           ${moist ? moist.scenes.map((s) => `<li><code>${esc(s.source)}</code></li>`).join("") : ""}</ul></details>
@@ -779,7 +824,7 @@
     }
 
     // ------------------------------------------------------------------- keyboard: arrows change the date / the step
-    document.addEventListener("keydown", (e) => {
+    app.onKey = (e) => {
       if (dlg.open || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
       const t = e.target;
       if (t.matches && t.matches("input, textarea, select, #swipe-handle")) return;
@@ -788,11 +833,11 @@
       const dir = e.key === "ArrowLeft" ? -1 : 1;
       if (state.mode === "learn") goStep(state.step + dir);
       else setDate(state.idx + dir, dir);
-    });
+    };
 
     // ------------------------------------------------------------------- go
     buildStops();
-    const learnMatch = location.hash.match(/^#learn-(\d+)$/);    // deep link for demos: #learn-3
+    const learnMatch = location.hash.match(/learn-(\d+)/);       // deep link for demos: #learn-3 or #r=gironde&learn-5
     if (learnMatch) {
       state.step = Math.max(0, Math.min(STEPS.length - 1, +learnMatch[1] - 1));
       setMode("learn");

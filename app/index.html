@@ -18,6 +18,7 @@
       <h1>Eifel Fire Radar</h1>
       <p class="sub">NASA Space Apps 2026 · Dancing with the SARs</p>
     </div>
+    <nav class="seg" id="regions" aria-label="Region" hidden></nav>
     <nav class="seg" aria-label="Mode">
       <button type="button" id="mode-explore" aria-pressed="true">Explore</button>
       <button type="button" id="mode-learn" aria-pressed="false">Learn</button>
@@ -101,7 +102,46 @@
 
   <script src="lib/leaflet.js"></script>
   <!-- Data is loaded with <script> tags (works from file://). app.js tries these folders in order. -->
-  <script>window.LAYER_DIRS = ["layers_series_all", "layers_series"];</script>
+  <script>
+    /* The study areas. Each one is a folder made by gcov_change.py series (plus the optional
+     * make_stable.py / make_damage.py extras). A region whose folder is missing is simply not offered.
+     * "about" and "fireSource" are shown in the About dialog; keep them honest and sourced. */
+    window.REGIONS = [
+      {
+        id: "eifel",
+        name: "Hürtgenwald",
+        title: "Hürtgenwald · Eifel, Germany — NISAR track 144",
+        dirs: ["layers_series_all", "layers_series"],
+        perimeter: "data/perimeter.geojson",
+        about: "In August 2026 a forest fire burned in the Hürtgenwald near Aachen.",
+        fireSource: '<span class="placeholder">[PLACEHOLDER: official source for the fire dates]</span>',
+      },
+      {
+        id: "ardennes",
+        name: "Monthermé",
+        title: "Monthermé · Ardennes, France — NISAR track 66",
+        dirs: ["layers_series_fr"],
+        about: 'In the same hot August week, on 15 August 2026, a forest fire burned about 95 ha of steep,' +
+          ' hard-to-reach forest at Monthermé in the French Ardennes, the wooded border country between' +
+          ' France and Belgium. The prefecture declared it contained on 16 August and fixed on 17 August' +
+          ' (<a href="https://www.franceinfo.fr/faits-divers/incendie/le-feu-de-foret-dans-les-ardennes-est-desormais-circonscrit-selon-la-prefecture_8150165.html">franceinfo</a>,' +
+          ' <a href="https://www.lavenir.net/actu/monde/2026/08/18/feux-de-foret-pres-de-la-frontiere-franco-belge-lincendie-dans-une-foret-des-ardennes-desormais-fixe-XH2JJ5G2TJD7FGA7PIXPW5IEEI/">L\u2019Avenir</a>).',
+        fireSource: 'Préfecture des Ardennes, via <a href="https://www.franceinfo.fr/faits-divers/incendie/le-feu-de-foret-dans-les-ardennes-est-desormais-circonscrit-selon-la-prefecture_8150165.html">franceinfo (16 Aug 2026)</a> and <a href="https://www.matele.be/incendie-a-montherme-france-100-hectares-sont-deja-partis-en-fumee">Matélé (17 Aug 2026)</a>',
+      },
+      {
+        id: "gironde",
+        name: "Gironde",
+        title: "Saumos · Gironde, France — NISAR track 95",
+        dirs: ["layers_series_gironde"],
+        about: 'On 22 July 2026 a fire broke out at Saumos in the Gironde, west of Bordeaux, and spread west into' +
+          ' the pine forests towards Lacanau and Le Porge. It was declared fixed on 1 August, with flare-ups' +
+          ' afterwards (Lacanau, 8 August). According to the French forest service ONF it burned about 42,000 ha,' +
+          ' 39,000 ha of them forest (<a href="https://www.onf.fr/vivre-la-foret/enjeux-foret/feux-foret/+/2dae::incendies-en-gironde-et-dans-les-landes-les-forestiers-de-lonf-au-coeur-de-la-crise.html">ONF</a>,' +
+          ' <a href="https://feuxdeforet.fr/en/gironde-33/saumos-22-07-2026-4367/">Feux de Forêt</a>).',
+        fireSource: '<a href="https://feuxdeforet.fr/en/gironde-33/saumos-22-07-2026-4367/">Feux de Forêt</a> (start 22 Jul, fixed 1 Aug 2026) and <a href="https://www.onf.fr/vivre-la-foret/enjeux-foret/feux-foret/+/2dae::incendies-en-gironde-et-dans-les-landes-les-forestiers-de-lonf-au-coeur-de-la-crise.html">ONF</a> (area)',
+      },
+    ];
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

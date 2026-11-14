@@ -32,7 +32,7 @@ button { cursor: pointer; }
 .brand h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
 .sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .seg { display: flex; padding: 3px; background: var(--soft); border-radius: 999px; }
-.seg button { min-height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-weight: 600; }
+.seg button { min-height: 36px; padding: 0 18px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(17, 24, 39, 0.16); }
 .link { min-height: var(--tap); padding: 0 6px; border: 0; background: none; color: var(--muted); font-weight: 500; }
 .link:hover { color: var(--ink); }
@@ -153,7 +153,11 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.35); }
 /* ------------------------------------------------------------ small screens */
 @media (max-width: 760px) {
   :root { --gap: 10px; }
-  .top { padding: 0 12px; gap: 10px; }
+  /* two switches do not fit next to the title: the header wraps onto a second row */
+  .top { flex-wrap: wrap; padding: 6px 12px; gap: 6px 10px; min-height: 0; }
+  .link { order: 1; min-height: 36px; }
+  #regions { order: 2; }
+  .seg { order: 3; }
   .sub { display: none; }
   .seg button { padding: 0 12px; }
   .panel, .panel.is-learn { width: calc(100% - 2 * var(--gap)); max-height: 46%; top: 64px; }
