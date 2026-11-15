@@ -244,6 +244,7 @@
       swipe: 0.55,           // compare line position, fraction of the map width
       open: window.innerWidth > 760,   // left card expanded (starts closed on phones, where it would hide the map)
       carbonOpen: false,     // right carbon card: details folded in (the number for the date is always shown)
+      photosOpen: false,     // wildfire photos card (top-right, when the region has photos)
       step: 0,               // Learn step
       loss: false,           // Learn only: show strong loss instead of the layer
       outline: false,        // Learn only: outline of the lasting damage
@@ -367,6 +368,65 @@
       L.geoJSON(PERIMETER, { pane: "topPane", interactive: false,
         style: { color: "#e5484d", weight: 2, dashArray: "6 4", fill: false } }).addTo(map);
     }
+
+    // ------------------------------------------------------------------- wildfire photos (top-right button & card)
+    const hasPhotos = !!(REGION.photos && REGION.photos.items && REGION.photos.items.length);
+    const photoCard = $("photo-card");
+    if (hasPhotos) {
+      const ph = REGION.photos, items = ph.items;
+      let pIdx = 0;
+      $("photos-count").textContent = items.length;
+      photoCard.innerHTML = `
+        <div class="photo-card-head">
+          <span class="photo-card-title">${esc(ph.title || "Wildfire photos")}</span>
+          <span class="photo-card-count"></span>
+          <button type="button" class="photo-close" aria-label="Close photos">×</button>
+        </div>
+        <div class="photo-card-stage">
+          <a class="photo-link" target="_blank" rel="noopener" title="Open full size">
+            <img class="photo-img" alt=""/>
+          </a>
+          ${items.length > 1 ? `
+            <button type="button" class="photo-nav photo-nav-prev" aria-label="Previous photo">‹</button>
+            <button type="button" class="photo-nav photo-nav-next" aria-label="Next photo">›</button>` : ""}
+        </div>
+        <div class="photo-card-foot">
+          <div class="photo-card-meta">
+            <p class="photo-card-cap"></p>
+            <p class="photo-card-credit" hidden></p>
+          </div>
+          ${items.length > 1 ? `<div class="dots photo-dots">${items.map(() => "<span></span>").join("")}</div>` : ""}
+        </div>`;
+      const imgEl = photoCard.querySelector(".photo-img");
+      const linkEl = photoCard.querySelector(".photo-link");
+      const capEl = photoCard.querySelector(".photo-card-cap");
+      const credEl = photoCard.querySelector(".photo-card-credit");
+      const cntEl = photoCard.querySelector(".photo-card-count");
+      const dotEls = photoCard.querySelectorAll(".photo-dots span");
+      const showPhoto = (k) => {
+        pIdx = (k + items.length) % items.length;
+        const it = items[pIdx];
+        imgEl.src = it.src;
+        imgEl.alt = it.caption || ph.title || "Wildfire photo";
+        linkEl.href = it.src;
+        capEl.textContent = it.caption || "";
+        credEl.hidden = !it.credit;
+        credEl.innerHTML = it.credit
+          ? (it.creditUrl ? `Photo: <a href="${esc(it.creditUrl)}" target="_blank" rel="noopener">${esc(it.credit)}</a>` : `Photo: ${esc(it.credit)}`)
+          : "";
+        cntEl.textContent = items.length > 1 ? `${pIdx + 1} / ${items.length}` : "";
+        dotEls.forEach((d, i) => d.classList.toggle("on", i === pIdx));
+      };
+      if (items.length > 1) {
+        photoCard.querySelector(".photo-nav-prev").onclick = () => showPhoto(pIdx - 1);
+        photoCard.querySelector(".photo-nav-next").onclick = () => showPhoto(pIdx + 1);
+      }
+      photoCard.querySelector(".photo-close").onclick = () => { state.photosOpen = false; render(); };
+      showPhoto(0);
+    } else {
+      photoCard.innerHTML = "";
+    }
+    $("photos-btn").onclick = () => { state.photosOpen = !state.photosOpen; render(); };
 
     // ------------------------------------------------------------------- compare line
     const swipe = $("swipe");
@@ -581,10 +641,15 @@
 
       renderPanel();
 
-      // compare control
-      $("compare").hidden = state.mode === "learn" || list.length < 2 || !!layer.change;
+      // compare & photos controls (top-right)
+      const canCmp = state.mode !== "learn" && list.length >= 2 && !layer.change;
+      $("compare").hidden = !hasPhotos && !canCmp;
+      $("photos-btn").hidden = !hasPhotos;
+      $("photos-btn").setAttribute("aria-pressed", String(hasPhotos && state.photosOpen));
+      photoCard.hidden = !(hasPhotos && state.photosOpen);
+      $("cmp-btn").hidden = !canCmp;
       $("cmp-btn").setAttribute("aria-pressed", String(state.cmp));
-      $("cmp-with").hidden = !state.cmp;
+      $("cmp-with").hidden = !(canCmp && state.cmp);
       const sel = $("cmp-date");
       Array.from(sel.options).forEach((o, i) => { o.disabled = i === state.idx; });
       sel.value = state.ref;
@@ -1118,6 +1183,10 @@
         <h3>Credits</h3>
         <p>NISAR, NASA/ISRO via ASF DAAC. Basemap © OpenStreetMap contributors. Map library: Leaflet.
           Team: <span class="placeholder">[PLACEHOLDER: team names]</span>.</p>
+        ${hasPhotos && REGION.photos.items.some((it) => it.credit) ? `<p style="margin-top:6px">Photos: ${
+          REGION.photos.items.filter((it) => it.credit).map((it) =>
+            it.creditUrl ? `<a href="${esc(it.creditUrl)}" target="_blank" rel="noopener">${esc(it.credit)}</a>` : esc(it.credit)
+          ).join(" · ")}</p>` : ""}
         <p class="muted" style="margin-top:6px">${esc(META.notes || "")}</p>`;
     }
 

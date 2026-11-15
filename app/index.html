@@ -50,14 +50,23 @@
       </div>
     </aside>
 
-    <!-- ============================================================ compare: one button, one date -->
+    <!-- ============================================================ compare & wildfire photos (top right) -->
     <div class="compare" id="compare">
+      <button type="button" class="pill pill-photos" id="photos-btn" aria-pressed="false" hidden>
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+          <path d="M4 7h3l2-2h6l2 2h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2zm8 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Fire photos</span>
+        <span class="photo-pill-count" id="photos-count"></span>
+      </button>
       <button type="button" class="pill" id="cmp-btn" aria-pressed="false">Compare</button>
       <label class="pill pill-select" id="cmp-with" hidden>
         <span>with</span>
         <select id="cmp-date" aria-label="Date to compare with"></select>
       </label>
     </div>
+
+    <aside class="card photo-pop" id="photo-card" aria-label="Wildfire photos" hidden></aside>
 
     <!-- ============================================================ right card: carbon stored in the trees (carbon.js) -->
     <aside class="card carbon-card" id="carbon-card" hidden>
@@ -126,6 +135,29 @@
         title: "Hürtgenwald · Eifel, Germany — NISAR track 144",
         dirs: ["layers_series_all", "layers_series"],
         perimeter: "data/perimeter.geojson",
+        photos: {
+          title: "Hürtgenwald wildfire · 14 Aug 2026",
+          items: [
+            {
+              src: "pictures/schlich_01.jpg",
+              caption: "Aerial view from Schlich · 14 Aug 2026, 20:03",
+              credit: "NDG · CC BY-SA 4.0",
+              creditUrl: "https://commons.wikimedia.org/w/index.php?curid=197470259",
+            },
+            {
+              src: "pictures/schlich_02.jpg",
+              caption: "Aerial view from Schlich · 14 Aug 2026, 20:04",
+              credit: "NDG · CC BY-SA 4.0",
+              creditUrl: "https://commons.wikimedia.org/w/index.php?curid=197470268",
+            },
+            {
+              src: "pictures/derichsweiler_03.jpg",
+              caption: "Aerial view from Derichsweiler · 14 Aug 2026, 20:15",
+              credit: "NDG · CC BY-SA 4.0",
+              creditUrl: "https://commons.wikimedia.org/w/index.php?curid=197470709",
+            },
+          ],
+        },
         about: "In August 2026 a forest fire burned in the Hürtgenwald near Aachen.",
         fireSource: '<span class="placeholder">[PLACEHOLDER: official source for the fire dates]</span>',
       },
@@ -147,6 +179,29 @@
         name: "Gironde",
         title: "Saumos · Gironde, France — NISAR track 95",
         dirs: ["layers_series_gironde"],
+        photos: {
+          title: "Wildfire in France · July 2026",
+          items: [
+            {
+              src: "pictures/gironde_01.jpg",
+              caption: "Smoke plume over pine forest · July 2026",
+              credit: "Frenchbluesman · CC BY 4.0",
+              creditUrl: "https://commons.wikimedia.org/w/index.php?curid=195131825",
+            },
+            {
+              src: "pictures/gironde_02.jpg",
+              caption: "Water-bombing helicopter over forest fire · July 2026",
+              credit: "Antimuonium · CC BY-SA 4.0",
+              creditUrl: "https://commons.wikimedia.org/w/index.php?curid=195361653",
+            },
+            {
+              src: "pictures/gironde_03.jpg",
+              caption: "Wildfire glow at dusk · July 2026",
+              credit: "Aurelio Cárdenas · CC BY 4.0",
+              creditUrl: "https://commons.wikimedia.org/w/index.php?curid=195192289",
+            },
+          ],
+        },
         about: 'On 22 July 2026 a fire broke out at Saumos in the Gironde, west of Bordeaux, and spread west into' +
           ' the pine forests towards Lacanau and Le Porge. It was declared fixed on 1 August, with flare-ups' +
           ' afterwards (Lacanau, 8 August). According to the French forest service ONF it burned about 42,000 ha,' +
