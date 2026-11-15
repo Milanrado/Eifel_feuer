@@ -194,6 +194,17 @@
     /* band: which PNG channel holds the value (0 = red, 2 = blue), the range it encodes (enc), and the
      * display stretch (range). The stretch is a display choice so the palette is not wasted on empty range.
      * Names say what a layer means; the radar terms (HV, HH, RVI, SME2) are explained under "About". */
+    /* Moisture colour stretch: the product range (0 to 0.6 m3/m3) leaves typical summer values in the pale middle
+     * of the palette. The display spans the region's scene medians +/- 0.15 instead, inside the product range. */
+    const MOIST_STRETCH = moist ? (() => {
+      const med = moist.scenes.map((s) => s.median_m3_m3).filter((v) => v != null);
+      const r = moist.range;
+      if (!med.length) return r;
+      const lo = Math.max(r[0], Math.floor((Math.min(...med) - 0.15) * 20) / 20);
+      const hi = Math.min(r[1], Math.ceil((Math.max(...med) + 0.15) * 20) / 20);
+      return hi - lo >= 0.1 ? [lo, hi] : r;
+    })() : null;
+
     const LAYERS = [
       { id: "forest", set: "radar", name: "Forest", sub: "Where trees stand", file: (s) => radarFile(s, s.hv),
         band: { chan: steady ? 1 : 0, enc: DBR.HV, range: [-22, -8], pal: "viridis" }, lo: "open land", hi: "dense forest",
@@ -216,8 +227,11 @@
           ? `Compares the echo from plants with the echo from the ground. Green means a lot of woody vegetation. The scale starts at the burned forest (its lowest value after the fire, on ${fmtDate(VEG.rvi_burned_date)}); bare fields and roads look the same. Buildings are not on the scale: they are grey.`
           : "Compares the echo from plants with the echo from the ground. Green means a lot of woody vegetation, brown means little." },
       { id: "moisture", set: "moisture", name: "Moisture", sub: "Water in the soil", file: (s) => s.file,
-        band: moist ? { chan: 0, enc: moist.range, range: moist.range, pal: "moist" } : null, lo: "dry", hi: "wet",
-        text: "How much water the top soil holds. Dry soil and dry plants burn more easily. Under dense forest the satellite cannot measure it, so there are gaps." },
+        band: moist ? { chan: 0, enc: moist.range, range: MOIST_STRETCH, pal: "moist" } : null,
+        lo: moist ? `dry (${MOIST_STRETCH[0].toFixed(2)})` : "dry", hi: moist ? `wet (${MOIST_STRETCH[1].toFixed(2)} m³/m³)` : "wet",
+        text: "How much water the top soil holds. Dry soil and dry plants burn more easily." + (moist && /all valid/.test(moist.quality || "")
+          ? " The map also shows values the product does not mark as reliable, mostly under forest, where the satellite sees the trees more than the soil."
+          : " Under dense forest the satellite cannot measure it, so there are gaps.") },
       // only used by the Learn tour, not offered as a layer
       { id: "composite", set: "radar", hidden: true, name: "Colour composite", file: (s) => radarFile(s, s.composite) },
     ];

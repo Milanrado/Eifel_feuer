@@ -153,15 +153,18 @@ forest_watch_api/scripts/
    needs an Earthdata login in `forest_watch_api/.env`. Inside `forest_watch_api/`:
 
    ```bash
-   python scripts/sme2_layers.py build --out ../app/layers_series_all    --granules $(cat scripts/sme2_granules_track144.txt)
-   python scripts/sme2_layers.py build --out ../app/layers_series_fr     --granules $(cat scripts/sme2_granules_track66_montherme.txt)
-   python scripts/sme2_layers.py build --out ../app/layers_series_gironde --granules $(cat scripts/sme2_granules_track95_gironde.txt)
+   python scripts/sme2_layers.py build --include-unrecommended --out ../app/layers_series_all    --granules $(cat scripts/sme2_granules_track144.txt)
+   python scripts/sme2_layers.py build --include-unrecommended --out ../app/layers_series_fr     --granules $(cat scripts/sme2_granules_track66_montherme.txt)
+   python scripts/sme2_layers.py build --include-unrecommended --out ../app/layers_series_gironde --granules $(cat scripts/sme2_granules_track95_gironde.txt)
    ```
 
-   Only pixels the product marks as recommended are kept. Dense forest is mostly not recommended, so
-   the layer covers little: Hürtgenwald 17–18 % of the box (9 dates), Gironde 12–13 % (11 dates),
-   Monthermé 0.2 % (8 dates; 18 and 30 Jun had no usable pixel). With `--include-unrecommended` a
-   test scene in the Gironde covered 88 %, but those values are not validated by the product.
+   The layers keep all valid pixels (`--include-unrecommended`), so the map is filled: Hürtgenwald 99 %
+   of the box (9 dates), Monthermé 98–99 % (10 dates), Gironde 87–88 % (11 dates; the rest is water and
+   towns). Most of these pixels are **not** marked as recommended by the product, mainly under forest,
+   where the satellite sees the trees more than the soil. With recommended pixels only the layer
+   covered just 17–18 %, 0.2 % and 12–13 %. The app says this in the layer text and under About.
+   The colours span the region's scene medians ± 0.15 m³/m³ (inside the product range 0–0.6), so
+   typical values are not lost in the pale middle of the palette.
 
 ## Limits
 

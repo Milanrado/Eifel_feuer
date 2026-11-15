@@ -15,97 +15,97 @@
     0.6
   ],
   "pixel_spacing_m": 200.2,
-  "quality": "recommended pixels only",
+  "quality": "all valid pixels",
   "scenes": [
     {
       "date": "2026-06-24",
       "time": "2026-06-24T04:20:15",
       "source": "NISAR_L3_PR_SME2_023_144_A_027_2005_DHDH_A_20260624T042015_20260624T042050_P05023_N_F_J_001",
       "file": "moisture_2026-06-24.png",
-      "mean_m3_m3": 0.232,
-      "median_m3_m3": 0.215,
+      "mean_m3_m3": 0.307,
+      "median_m3_m3": 0.33,
       "recommended_share_percent": 16.7,
-      "covered_share_percent": 16.9
+      "covered_share_percent": 99.1
     },
     {
       "date": "2026-07-06",
       "time": "2026-07-06T04:20:14",
       "source": "NISAR_L3_PR_SME2_024_144_A_027_2005_DHDH_A_20260706T042014_20260706T042049_P05023_N_F_J_001",
       "file": "moisture_2026-07-06.png",
-      "mean_m3_m3": 0.207,
-      "median_m3_m3": 0.187,
+      "mean_m3_m3": 0.29,
+      "median_m3_m3": 0.314,
       "recommended_share_percent": 17.5,
-      "covered_share_percent": 17.5
+      "covered_share_percent": 99.1
     },
     {
       "date": "2026-07-18",
       "time": "2026-07-18T04:20:13",
       "source": "NISAR_L3_PR_SME2_025_144_A_027_2005_DHDH_A_20260718T042013_20260718T042049_P05023_N_F_J_001",
       "file": "moisture_2026-07-18.png",
-      "mean_m3_m3": 0.169,
-      "median_m3_m3": 0.167,
+      "mean_m3_m3": 0.203,
+      "median_m3_m3": 0.21,
       "recommended_share_percent": 17.2,
-      "covered_share_percent": 17.7
+      "covered_share_percent": 99.1
     },
     {
       "date": "2026-08-11",
       "time": "2026-08-11T04:20:12",
       "source": "NISAR_L3_PR_SME2_027_144_A_027_2005_DHDH_A_20260811T042012_20260811T042047_P05023_N_F_J_001",
       "file": "moisture_2026-08-11.png",
-      "mean_m3_m3": 0.198,
-      "median_m3_m3": 0.195,
+      "mean_m3_m3": 0.193,
+      "median_m3_m3": 0.191,
       "recommended_share_percent": 17.4,
-      "covered_share_percent": 17.6
+      "covered_share_percent": 99.1
     },
     {
       "date": "2026-08-23",
       "time": "2026-08-23T04:20:11",
       "source": "NISAR_L3_PR_SME2_028_144_A_027_2005_DHDH_A_20260823T042011_20260823T042047_P05023_N_F_J_001",
       "file": "moisture_2026-08-23.png",
-      "mean_m3_m3": 0.267,
-      "median_m3_m3": 0.264,
+      "mean_m3_m3": 0.253,
+      "median_m3_m3": 0.251,
       "recommended_share_percent": 17.0,
-      "covered_share_percent": 17.0
+      "covered_share_percent": 99.1
     },
     {
       "date": "2026-09-04",
       "time": "2026-09-04T04:20:11",
       "source": "NISAR_L3_PR_SME2_029_144_A_027_2005_DHDH_A_20260904T042011_20260904T042046_P05023_N_F_J_001",
       "file": "moisture_2026-09-04.png",
-      "mean_m3_m3": 0.217,
+      "mean_m3_m3": 0.215,
       "median_m3_m3": 0.213,
       "recommended_share_percent": 17.1,
-      "covered_share_percent": 17.3
+      "covered_share_percent": 99.1
     },
     {
       "date": "2026-09-16",
       "time": "2026-09-16T04:20:11",
       "source": "NISAR_L3_PR_SME2_030_144_A_027_2005_DHDH_A_20260916T042011_20260916T042046_P05023_N_F_J_001",
       "file": "moisture_2026-09-16.png",
-      "mean_m3_m3": 0.237,
-      "median_m3_m3": 0.236,
+      "mean_m3_m3": 0.227,
+      "median_m3_m3": 0.224,
       "recommended_share_percent": 17.1,
-      "covered_share_percent": 17.7
+      "covered_share_percent": 99.1
     },
     {
       "date": "2026-09-28",
       "time": "2026-09-28T04:20:11",
       "source": "NISAR_L3_PR_SME2_031_144_A_027_2005_DHDH_A_20260928T042011_20260928T042046_P05023_N_F_J_001",
       "file": "moisture_2026-09-28.png",
-      "mean_m3_m3": 0.196,
-      "median_m3_m3": 0.191,
+      "mean_m3_m3": 0.197,
+      "median_m3_m3": 0.196,
       "recommended_share_percent": 17.5,
-      "covered_share_percent": 17.7
+      "covered_share_percent": 99.1
     },
     {
       "date": "2026-10-10",
       "time": "2026-10-10T04:20:11",
       "source": "NISAR_L3_PR_SME2_032_144_A_027_2005_DHDH_A_20261010T042011_20261010T042046_P05023_N_F_J_001",
       "file": "moisture_2026-10-10.png",
-      "mean_m3_m3": 0.26,
-      "median_m3_m3": 0.257,
+      "mean_m3_m3": 0.248,
+      "median_m3_m3": 0.244,
       "recommended_share_percent": 18.5,
-      "covered_share_percent": 18.5
+      "covered_share_percent": 99.1
     }
   ],
   "notes": "NISAR SME2 soil moisture, PROVISIONAL. Soil moisture is not fuel moisture; rain between acquisitions changes it. Dense forest is often not recommended by the product, so there are gaps."
