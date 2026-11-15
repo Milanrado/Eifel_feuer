@@ -219,13 +219,11 @@
         band: { chan: 0, enc: DBR.HH, range: [-17, -1], pal: "inferno" }, lo: "smooth ground", hi: "rough ground, buildings",
         text: "Smooth ground mirrors the radar pulse away and stays dark. Walls and rough or wet ground send it back and glow." },
       { id: "vegetation", set: "radar", name: "Vegetation", sub: "How much plant cover", file: (s) => radarFile(s, s.composite),
-        // with vegetation.js (scripts/make_vegetation.py) the scale starts at the burned forest, and buildings,
-        // which have the lowest index of all, are painted in a neutral grey off the scale
-        band: { chan: 2, enc: DBR.ratio, range: [VEG ? VEG.rvi_burned : 0.2, 1.2], pal: "veg", value: rviOf },
-        lo: VEG ? "burned forest" : "bare", hi: "lush",
-        text: VEG
-          ? `Compares the echo from plants with the echo from the ground. Green means a lot of woody vegetation. The scale starts at the burned forest (its lowest value after the fire, on ${fmtDate(VEG.rvi_burned_date)}); bare fields and roads look the same. Buildings are not on the scale: they are grey.`
-          : "Compares the echo from plants with the echo from the ground. Green means a lot of woody vegetation, brown means little." },
+        // one fixed scale in every region (more contrast than starting at the burned forest, which was tried and dropped);
+        // with vegetation.js (scripts/make_vegetation.py) buildings are painted in a neutral grey off the scale
+        band: { chan: 2, enc: DBR.ratio, range: [0.2, 1.2], pal: "veg", value: rviOf }, lo: "bare", hi: "lush",
+        text: "Compares the echo from plants with the echo from the ground. Green means a lot of woody vegetation, brown means little."
+          + (VEG && VEG.buildings ? " Buildings are not on the scale: they are grey." : "") },
       { id: "moisture", set: "moisture", name: "Moisture", sub: "Water in the soil", file: (s) => s.file,
         band: moist ? { chan: 0, enc: moist.range, range: MOIST_STRETCH, pal: "moist" } : null,
         lo: moist ? `dry (${MOIST_STRETCH[0].toFixed(2)})` : "dry", hi: moist ? `wet (${MOIST_STRETCH[1].toFixed(2)} m³/m³)` : "wet",
@@ -1046,9 +1044,7 @@
             ${fmtDateLong(base.date)}, the last image before the fire. White is unchanged or stronger, red is weaker, full red at
             −${META.diff_range_db} dB.</li>
           <li><strong>Vegetation</strong> is the radar vegetation index RVI = 4·HV / (HH + HV). A relative index, not biomass in t/ha.${VEG
-            ? ` Here the colour scale starts at the burned forest (mean RVI ${VEG.rvi_burned.toFixed(2)} of the damaged area on
-              ${fmtDateLong(VEG.rvi_burned_date)}; ${VEG.rvi_damage_area_before.toFixed(2)} before the fire). Buildings are grey and
-              not on the scale: ${esc(VEG.buildings_method)} (${VEG.buildings_share_percent} % of the area, <code>scripts/make_vegetation.py</code>).
+            ? ` Colour scale 0.2 to 1.2, as in every region. Buildings are grey and not on the scale: ${esc(VEG.buildings_method)} (${VEG.buildings_share_percent} % of the area, <code>scripts/make_vegetation.py</code>).
               ${REGION.buildingsCheck || ""}`
             : ""}</li>
           ${VEG && VEG.water ? `<li><strong>Water</strong> (blue-grey on every layer, ${VEG.water_share_percent} % of the area): ${esc(VEG.water_method)}.
