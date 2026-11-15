@@ -29,6 +29,11 @@ Eifel Fire Radar is a static web map (no backend, no build step):
     explained under *About*.
   - *Compare* (button on the map): pick a second date and drag the line between the two.
   - *Time* (bottom): one handle that snaps to the acquisitions, with the fire window marked.
+  - *CO₂ in the trees* (right card): one number for the shown date, CO₂ in forest with an intact
+    canopy (all trees minus the places where the Change layer is red on that date). In compare mode it
+    shows the difference between the two dates. *Details* folds out the totals (all trees, lasting
+    damage area), the yearly uptake that is missing until the forest grows back, and a measured
+    recovery tracker (canopy echo of the damaged area per radar date, % of before the fire).
 - **Learn**: 6 short steps: how radar sees, HH, HV, the colour composite, finding the damage,
   before and now.
 - **About**: layers, sources, method, scene table and limits.
@@ -153,15 +158,43 @@ forest_watch_api/scripts/
    needs an Earthdata login in `forest_watch_api/.env`. Inside `forest_watch_api/`:
 
    ```bash
-   python scripts/sme2_layers.py build --out ../app/layers_series_all    --granules $(cat scripts/sme2_granules_track144.txt)
-   python scripts/sme2_layers.py build --out ../app/layers_series_fr     --granules $(cat scripts/sme2_granules_track66_montherme.txt)
-   python scripts/sme2_layers.py build --out ../app/layers_series_gironde --granules $(cat scripts/sme2_granules_track95_gironde.txt)
+   python scripts/sme2_layers.py build --include-unrecommended --out ../app/layers_series_all    --granules $(cat scripts/sme2_granules_track144.txt)
+   python scripts/sme2_layers.py build --include-unrecommended --out ../app/layers_series_fr     --granules $(cat scripts/sme2_granules_track66_montherme.txt)
+   python scripts/sme2_layers.py build --include-unrecommended --out ../app/layers_series_gironde --granules $(cat scripts/sme2_granules_track95_gironde.txt)
    ```
 
-   Only pixels the product marks as recommended are kept. Dense forest is mostly not recommended, so
-   the layer covers little: Hürtgenwald 17–18 % of the box (9 dates), Gironde 12–13 % (11 dates),
-   Monthermé 0.2 % (8 dates; 18 and 30 Jun had no usable pixel). With `--include-unrecommended` a
-   test scene in the Gironde covered 88 %, but those values are not validated by the product.
+   The layers keep all valid pixels (`--include-unrecommended`), so the map is filled: Hürtgenwald 99 %
+   of the box (9 dates), Monthermé 98–99 % (10 dates), Gironde 87–88 % (11 dates; the rest is water and
+   towns). Most of these pixels are **not** marked as recommended by the product, mainly under forest,
+   where the satellite sees the trees more than the soil. With recommended pixels only the layer
+   covered just 17–18 %, 0.2 % and 12–13 %. The app says this in the layer text and under About.
+   The colours span the region's scene medians ± 0.15 m³/m³ (inside the product range 0–0.6), so
+   typical values are not lost in the pale middle of the palette.
+
+6. `make_carbon.py` adds the carbon card (all three regions, inside `forest_watch_api/`):
+
+   ```bash
+   python scripts/make_carbon.py ../app/layers_series_all      # same for layers_series_fr, layers_series_gironde
+   ```
+
+   Biomass comes from **NASA GEDI L4B v2.1** (lidar from the ISS, 1 km grid, mean of the mission years
+   before 2026, with a standard error per cell). The script reads only the tiles under the box from the
+   global cloud-optimised GeoTIFFs at ORNL DAAC, with the same Earthdata login as the radar data, and
+   decodes them with a small built-in TIFF/LZW reader (no GDAL). Per radar pixel: stock = biomass
+   density × pixel area; carbon = 0.47 × biomass (IPCC 2006, Vol. 4, Ch. 4, Table 4.3, p. 4.48, not
+   changed in 2019); CO₂ = carbon × 44/12. Lost uptake = damaged area × 2.3 t dry matter per ha and year
+   × 0.47 × 44/12 (IPCC 2019 Refinement, Vol. 4, Ch. 4, Table 4.9 (Updated), p. 4.37: natural forest,
+   temperate oceanic, Europe; no uncertainty given there, the Tier 1 default applies).
+   Per date, the script also sums the stock where the forest echo is more than 1.5 dB below the last
+   image before the fire (same steadied images as the Change layer). In the Gironde that is 0 ha on
+   14 Jul, 9,500 ha on 19 Aug and 30,000–32,600 ha from late September on (−3.3 Mt CO₂ in forest with
+   an intact canopy on 30 Oct). Single images are noisy: on 8 Jun the same test already flags 1,700 ha.
+
+   | Region | GEDI cells | CO₂ stored in the box | CO₂ in the damaged forest | lost uptake |
+   |---|---|---|---|---|
+   | Hürtgenwald | 40 | 450 kt ± 46 kt | 3.3 kt (16.4 ha) | ≈ 65 t / year |
+   | Monthermé | 93 | 2.2 Mt ± 0.24 Mt | 2.7 kt (9.2 ha, likely noise, see below) | ≈ 36 t / year |
+   | Gironde | 1,968 | 20.0 Mt ± 2.5 Mt | 2.3 Mt (19,401 ha) | ≈ 77 kt / year |
 
 ## Limits
 
@@ -177,6 +210,13 @@ forest_watch_api/scripts/
 - Soil moisture (SME2) is not fuel moisture, and dense forest is often not recommended by the
   product, so the Moisture layer has gaps.
 - We do not claim causes beyond what the data show.
+- Carbon: above-ground live biomass only (no roots, dead wood, soil). "CO₂ in the damaged forest" is
+  the stock that stood there, **not** the emission of the fire: only part burns, the rest decays over
+  years or is cleared. GEDI is from before 2026 and does not see the fire; at 1 km it is coarse for the
+  small Eifel box. The ± adds the cell errors as if fully correlated (an upper bound). The growth rate
+  is an IPCC default for natural forest, not a measurement of these forests (the Gironde is mostly pine
+  plantation). The recovery bars measure the canopy echo: back at 100 % means the crowns are back, not
+  that the biomass is.
 - The official fire perimeter is not included. If `app/data/perimeter.geojson` exists, the app
   shows it as a dashed red line with a toggle (needs the local server, `fetch` is blocked on file://).
 
@@ -184,6 +224,8 @@ forest_watch_api/scripts/
 
 - NISAR Level-2 GCOV, NASA/ISRO, distributed by the Alaska Satellite Facility DAAC
   (https://search.asf.alaska.edu/). Granule IDs are listed in the app ("Data & method").
+- NASA GEDI L4B Gridded Aboveground Biomass Density v2.1, ORNL DAAC, https://doi.org/10.3334/ORNLDAAC/2299
+- IPCC 2006 Guidelines and 2019 Refinement, Vol. 4, Ch. 4 (Forest Land), https://www.ipcc-nggip.iges.or.jp/
 - Basemap © OpenStreetMap contributors.
 - Leaflet (BSD-2-Clause), Inter font (SIL Open Font License, via Google Fonts).
 - Fire dates Hürtgenwald: [PLACEHOLDER: official source for the 14–20 Aug 2026 fire]
