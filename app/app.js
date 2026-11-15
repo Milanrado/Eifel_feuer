@@ -886,7 +886,9 @@
           <strong>comparing every spot only with itself</strong> before the fire (${fmtDate(base.date)}).</p>
         <p>Places that stayed the same stay <strong>white</strong>; only places that lost tree canopy
           turn <strong>red</strong>. In Explore this is the layer "Change".</p>${steady ? `
-         : ""}`,
+        <p>To keep rain and one-off satellite flickers from looking like fire damage, Explore also
+          <strong>steadies</strong> the radar series: removing scene-wide weather shifts, smoothing across
+          three passes in a row${STABLE.forest_cap ? ", and never letting Forest rise above its pre-fire level" : ""}.</p>` : ""}`,
       svg: SVG_CHANGE,
       hint: `<p>Showing the <b>Change</b> layer on ${fmtDateLong(last.date)} compared with ${fmtDateLong(base.date)}.</p>
         <p><b>White</b> means unchanged (both intact forest and meadows that were already open). <b>Red</b>
