@@ -136,6 +136,30 @@ button { cursor: pointer; }
 
 /* outline of the lasting damage (Learn) and the optional official perimeter sit above the data */
 
+/* ------------------------------------------------------------ carbon card (inside the left card, Explore) */
+/* stays clear of the zoom buttons and the scale bar above the time card (about 250 px from the bottom) */
+.carbon-card { top: calc(var(--gap) + var(--tap) + 10px); right: var(--gap); width: 280px; max-height: calc(100% - var(--gap) - var(--tap) - 10px - 260px); display: flex; flex-direction: column; }
+.carbon-card .panel-head { min-height: 44px; }
+.carbon-card .panel-head[aria-expanded="false"] ~ .carbon { display: none; }
+.c-more { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.carbon-card .chev { margin-left: 4px; }
+.carbon-now { padding: 0 16px 10px; }
+.c-lead { font-size: 13px; line-height: 1.4; margin-bottom: 8px; }
+.c-lead .loss { color: var(--accent); font-weight: 600; }
+.carbon-now .c-big { font-size: 22px; }
+.c-big.loss, .c-sub.loss { color: var(--accent); }
+.carbon { padding: 10px 16px 10px; overflow-y: auto; border-top: 1px solid var(--line); }
+.c-row { display: grid; gap: 1px; margin-bottom: 10px; }
+.c-big { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.c-mid { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.c-sub, .c-note, .c-src, .c-label { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.c-label { margin: 4px 0 2px; color: var(--ink); font-weight: 600; }
+.c-note { margin: 2px 0 8px; }
+.c-note strong { color: var(--accent); }
+.c-warn { background: #fff7e6; border-radius: 8px; padding: 8px 10px; color: var(--ink); }
+.c-src { margin: 6px 0 4px; }
+.carbon svg.bars { display: block; width: 100%; height: auto; overflow: visible; }
+
 /* ------------------------------------------------------------ about dialog */
 dialog { border: 0; border-radius: var(--radius); box-shadow: var(--shadow); padding: 0; max-width: 720px; width: calc(100% - 32px); max-height: 86vh; color: var(--ink); }
 dialog::backdrop { background: rgba(17, 24, 39, 0.35); }
@@ -166,6 +190,7 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.35); }
   .seg button { padding: 0 12px; }
   .panel, .panel.is-learn { width: calc(100% - 2 * var(--gap)); max-height: 46%; top: 64px; }
   .compare { left: var(--gap); right: auto; }
+  .carbon-card { top: auto; bottom: 118px; left: var(--gap); right: var(--gap); width: auto; max-height: 45%; }
   .time { padding: 10px 14px 6px; }
   .tl-stop span { display: none; }
   .tl-stop.is-sel span, .tl-stop:first-child span, .tl-stop:last-child span { display: inline; }
