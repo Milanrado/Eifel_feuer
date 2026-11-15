@@ -691,6 +691,71 @@
         <text x="196" y="108" font-size="10">many bounces in</text>
         <text x="196" y="120" font-size="10">branches and leaves</text>
       </svg>`;
+    const SVG_RVI = `
+      <svg viewBox="0 0 300 106" role="img" aria-label="Vegetation index compares crown echo HV against total echo: high share gives green, low share gives brown">
+        <line x1="150" x2="150" y1="10" y2="96" stroke="#d1d5db"/>
+        <text x="75" y="18" font-size="10" fill="#111827" text-anchor="middle">forest: lots of crown echo</text>
+        <rect x="15" y="28" width="78" height="16" fill="#3fa34d" stroke="#111827"/>
+        <rect x="93" y="28" width="42" height="16" fill="#d1d5db" stroke="#111827"/>
+        <text x="54" y="40" font-size="9.5" fill="#fff" font-weight="700" text-anchor="middle">HV</text>
+        <text x="114" y="40" font-size="9.5" fill="#111827" text-anchor="middle">HH</text>
+        <text x="75" y="58" font-size="9.5" fill="#6b7280" text-anchor="middle">crowns dominate</text>
+        <rect x="25" y="70" width="100" height="22" rx="6" fill="#3fa34d"/>
+        <text x="75" y="85" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">high → green</text>
+        <text x="225" y="18" font-size="10" fill="#111827" text-anchor="middle">bare / burned: little crown</text>
+        <rect x="165" y="28" width="18" height="16" fill="#3fa34d" stroke="#111827"/>
+        <rect x="183" y="28" width="102" height="16" fill="#d1d5db" stroke="#111827"/>
+        <text x="234" y="40" font-size="9.5" fill="#111827" text-anchor="middle">HH</text>
+        <text x="225" y="58" font-size="9.5" fill="#6b7280" text-anchor="middle">ground dominates</text>
+        <rect x="175" y="70" width="100" height="22" rx="6" fill="#7a3b0a"/>
+        <text x="225" y="85" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">low → brown</text>
+      </svg>`;
+    const SVG_MOIST = `
+      <svg viewBox="0 0 300 112" role="img" aria-label="Over open fields radar reads topsoil moisture clearly; over dense forest tree crowns get in the way">
+        <defs>
+          <marker id="ah-m-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#111827"/></marker>
+          <marker id="ah-m-bl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#2171b5"/></marker>
+          <marker id="ah-m-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#e5484d"/></marker>
+        </defs>
+        <line x1="150" x2="150" y1="10" y2="102" stroke="#d1d5db"/>
+        <text x="75" y="18" font-size="10" fill="#111827" text-anchor="middle">open field: reaches soil</text>
+        <rect x="20" y="84" width="110" height="8" fill="#8c510a" opacity="0.25"/>
+        <path d="M20 84 H130" stroke="#111827"/>
+        <path d="M32 30 L73 82" fill="none" stroke="#111827" stroke-width="1.5" marker-end="url(#ah-m-b)"/>
+        <path d="M77 82 L118 30" fill="none" stroke="#2171b5" stroke-width="1.5" marker-end="url(#ah-m-bl)"/>
+        <text x="75" y="105" font-size="9.5" fill="#2171b5" font-weight="700" text-anchor="middle">clear soil reading</text>
+        <text x="225" y="18" font-size="10" fill="#111827" text-anchor="middle">forest: crowns in the way</text>
+        <rect x="170" y="84" width="110" height="8" fill="#8c510a" opacity="0.25"/>
+        <path d="M170 84 H280" stroke="#111827"/>
+        <path d="M225 84 V66" stroke="#111827" stroke-width="3"/>
+        <circle cx="225" cy="54" r="20" fill="#fff" stroke="#111827"/>
+        <path d="M172 34 L204 51" fill="none" stroke="#111827" stroke-width="1.5" marker-end="url(#ah-m-b)"/>
+        <path d="M204 51 L182 26" fill="none" stroke="#e5484d" stroke-width="1.5" marker-end="url(#ah-m-r)"/>
+        <text x="225" y="105" font-size="9.5" fill="#e5484d" font-weight="700" text-anchor="middle">trees block soil view</text>
+      </svg>`;
+    const SVG_CHANGE = `
+      <svg viewBox="0 0 300 112" role="img" aria-label="Change compares each spot to itself before the fire: open fields stay white, burned forest turns red">
+        <defs>
+          <marker id="ah-ch" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#6b7280"/></marker>
+        </defs>
+        <line x1="150" x2="150" y1="10" y2="102" stroke="#d1d5db"/>
+        <text x="75" y="18" font-size="10" fill="#111827" text-anchor="middle">open field: always low</text>
+        <rect x="22" y="30" width="36" height="18" rx="3" fill="#440154" stroke="#111827"/>
+        <path d="M64 39 H86" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ah-ch)"/>
+        <rect x="92" y="30" width="36" height="18" rx="3" fill="#440154" stroke="#111827"/>
+        <text x="40" y="60" font-size="9" fill="#6b7280" text-anchor="middle">before</text>
+        <text x="110" y="60" font-size="9" fill="#6b7280" text-anchor="middle">after</text>
+        <rect x="20" y="72" width="110" height="22" rx="6" fill="#fff" stroke="#111827"/>
+        <text x="75" y="87" font-size="10" fill="#111827" font-weight="700" text-anchor="middle">no change → white</text>
+        <text x="225" y="18" font-size="10" fill="#111827" text-anchor="middle">burned forest: echo drops</text>
+        <rect x="172" y="30" width="36" height="18" rx="3" fill="#5ec962" stroke="#111827"/>
+        <path d="M214 39 H236" fill="none" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ah-ch)"/>
+        <rect x="242" y="30" width="36" height="18" rx="3" fill="#440154" stroke="#111827"/>
+        <text x="190" y="60" font-size="9" fill="#6b7280" text-anchor="middle">before</text>
+        <text x="260" y="60" font-size="9" fill="#6b7280" text-anchor="middle">after</text>
+        <rect x="170" y="72" width="110" height="22" rx="6" fill="#e5484d"/>
+        <text x="225" y="87" font-size="10" fill="#fff" font-weight="700" text-anchor="middle">canopy loss → red</text>
+      </svg>`;
 
     const fitAll = () => { untouched = true; map.flyToBounds(bounds, Object.assign({ duration: 0.6 }, padding())); };
     /** Fly to the damaged area; optionally put the compare line through its middle afterwards. */
@@ -777,7 +842,57 @@
         hint: `Drag the line on the map: left is ${fmtDate(base.date)}, right is ${fmtDate(radar[firstPostIdx].date)}, the first image after the fire. Most of the area looks the same; the changes are local.`,
         apply() { show({ layer: "composite", cmp: true, ref: baseIdx, idx: firstPostIdx, swipe: 0.6 }); fitAll(); },
       },
+      {
+        title: "Vegetation: plants vs. bare ground",
+        body: `<p><strong>Forest (HV)</strong> measures raw echo strength, which can still nudge up when
+            everything gets wet. The <strong>Vegetation</strong> layer solves this by looking at a
+            <strong>balance</strong> instead of raw brightness.</p>
+          <p>It compares the twisted crown echo (<strong>HV</strong>) against the <strong>total</strong>
+            echo from both plants and ground (<strong>HH + HV</strong>)—asking what share of the returning
+            radar came from leaves and branches.</p>
+          <p>Dense woods score high (<strong>green</strong>). Bare fields, roads, and burned forest—where
+            the ground echo dominates—score low (<strong>brown</strong>). In Explore this is the layer "Vegetation".</p>`,
+        svg: SVG_RVI,
+        hint: `<p>Showing the <b>Vegetation</b> layer on ${fmtDateLong(last.date)} (after the fire).</p>
+          <p><b>Green</b> marks lush woody cover; <b>brown</b> marks bare fields, roads, or burned canopy.${VEG
+            ? ` Here <b>buildings</b> are masked in <b>grey</b> (their strong corner bounce would otherwise look like bare dirt) and <b>open water</b> in <b>blue-grey</b>.`
+            : ""}</p>`,
+        apply() { show({ layer: "vegetation", idx: N - 1 }); fitAll(); },
+      },
     ];
+    if (moist) {
+      const moistIdx = nearest(moist.scenes, base.date);
+      STEPS.push({
+        title: "Moisture: water in the soil",
+        body: `<p>Water changes how strongly soil bounces radio waves back—just as wet sand behaves
+            differently from dry dust. The <strong>Moisture</strong> layer tracks how damp the top few
+            centimetres of ground are.</p>
+          <p><strong>Brown</strong> shows drier ground (when soil and plants dry out, fires start and
+            spread more easily); <strong>blue</strong> shows wetter soil after rain.</p>
+          <p><strong>Two limits:</strong> soil wetness is not the same as dry leaves or pine needles, and
+            under thick forest the radar mostly bounces off tree crowns instead of reaching the dirt beneath.</p>`,
+        svg: SVG_MOIST,
+        hint: `<p>Showing the <b>Moisture</b> layer on ${fmtDateLong(moist.scenes[moistIdx].date)} (around the fire).</p>
+          <p>Notice the larger blocky squares—soil moisture is averaged onto a coarser grid than the forest layers. ${/all valid/.test(moist.quality || "")
+            ? "Readings over <b>open fields</b> are most reliable; under dense trees the satellite sees more canopy than soil."
+            : "Gaps appear where thick forest hides the soil."}</p>`,
+        apply() { show({ layer: "moisture", idx: moistIdx }); fitAll(); },
+      });
+    }
+    STEPS.push({
+      title: "Change: spotting only real loss",
+      body: `<p>In <strong>Forest</strong>, open meadows already look dark—so it is hard to separate what
+          was <em>always</em> bare from what just burned. The <strong>Change</strong> layer fixes that by
+          <strong>comparing every spot only with itself</strong> before the fire (${fmtDate(base.date)}).</p>
+        <p>Places that stayed the same stay <strong>white</strong>; only places that lost tree canopy
+          turn <strong>red</strong>. In Explore this is the layer "Change".</p>${steady ? `
+         : ""}`,
+      svg: SVG_CHANGE,
+      hint: `<p>Showing the <b>Change</b> layer on ${fmtDateLong(last.date)} compared with ${fmtDateLong(base.date)}.</p>
+        <p><b>White</b> means unchanged (both intact forest and meadows that were already open). <b>Red</b>
+        means the tree-crown echo dropped${AREA ? "—next, Step 8 checks which drops last across multiple passes" : ""}.</p>`,
+      apply() { show({ layer: "change", idx: N - 1 }); if (AREA) flyArea(1.8); else fitAll(); },
+    });
     if (AREA) {
       STEPS.push({
         title: "Finding the damage",
