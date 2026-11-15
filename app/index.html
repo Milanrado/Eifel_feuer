@@ -59,6 +59,19 @@
       </label>
     </div>
 
+    <!-- ============================================================ right card: carbon stored in the trees (carbon.js) -->
+    <aside class="card carbon-card" id="carbon-card" hidden>
+      <!-- the compact number for the shown date (or the change between two dates) is always visible;
+           the header folds the details in and out -->
+      <button type="button" class="panel-head" id="carbon-toggle" aria-expanded="false" aria-controls="carbon">
+        <span class="panel-title">CO₂ in the trees</span>
+        <span class="c-more" id="carbon-more">Details</span>
+        <svg class="chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="carbon-now" id="carbon-now" aria-live="polite"></div>
+      <section id="carbon" class="carbon" aria-label="Carbon details"></section>
+    </aside>
+
     <!-- compare line on the map -->
     <div class="swipe" id="swipe" hidden>
       <div class="swipe-line"></div>
@@ -121,6 +134,7 @@
         name: "Monthermé",
         title: "Monthermé · Ardennes, France — NISAR track 66",
         dirs: ["layers_series_fr"],
+        damageCaveat: 'In this radar series the Monthermé fire leaves no clear mark: the lasting "damage" found here is only a few hectares, no more than noise produces elsewhere. Do not read the damage and carbon numbers of this area as the fire.',
         about: 'In the same hot August week, on 15 August 2026, a forest fire burned about 95 ha of steep,' +
           ' hard-to-reach forest at Monthermé in the French Ardennes, the wooded border country between' +
           ' France and Belgium. The prefecture declared it contained on 16 August and fixed on 17 August' +

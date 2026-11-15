@@ -119,8 +119,8 @@
       }
       if (!dir) continue;                       // region not built yet: simply not offered
       // optional extras: each one simply switches a feature on
-      window.NISAR_STABLE = window.NISAR_DAMAGE = window.NISAR_MOISTURE = window.NISAR_VEGETATION = null;
-      for (const f of ["stable.js", "damage.js", "moisture_meta.js", "vegetation.js"]) {
+      window.NISAR_STABLE = window.NISAR_DAMAGE = window.NISAR_MOISTURE = window.NISAR_VEGETATION = window.NISAR_CARBON = null;
+      for (const f of ["stable.js", "damage.js", "moisture_meta.js", "vegetation.js", "carbon.js"]) {
         try { await loadScript(`${dir}/${f}`); } catch (e) { /* not there: fine */ }
       }
       let perimeter = null;                     // fetch() only works over http(s), not from file://
@@ -131,7 +131,7 @@
         } catch (e) { /* no perimeter */ }
       }
       regions.push(Object.assign({}, r, { dir, data: {
-        META: window.NISAR_SERIES, STABLE: window.NISAR_STABLE || null, VEG: window.NISAR_VEGETATION || null,
+        META: window.NISAR_SERIES, STABLE: window.NISAR_STABLE || null, VEG: window.NISAR_VEGETATION || null, CARBON: window.NISAR_CARBON || null,
         DAMAGE: window.NISAR_DAMAGE || null, MOIST: window.NISAR_MOISTURE || null, PERIMETER: perimeter,
       } }));
     }
@@ -159,7 +159,7 @@
   function init(REGION, REGIONS, switchRegion) {
     const DIR = REGION.dir;
     const RID = REGION.id;
-    const { META, DAMAGE, MOIST, PERIMETER, STABLE, VEG } = REGION.data;
+    const { META, DAMAGE, MOIST, PERIMETER, STABLE, VEG, CARBON } = REGION.data;
     const radar = META.scenes;
     const N = radar.length;
     const baseIdx = Math.max(0, radar.findIndex((s) => s.date === META.baseline));
@@ -245,6 +245,7 @@
       ref: baseIdx,          // the date to compare with
       swipe: 0.55,           // compare line position, fraction of the map width
       open: window.innerWidth > 760,   // left card expanded (starts closed on phones, where it would hide the map)
+      carbonOpen: false,     // right carbon card: details folded in (the number for the date is always shown)
       step: 0,               // Learn step
       loss: false,           // Learn only: show strong loss instead of the layer
       outline: false,        // Learn only: outline of the lasting damage
@@ -307,7 +308,8 @@
     // keep the data clear of the floating cards
     const padding = () => ({
       paddingTopLeft: [state.open && window.innerWidth > 760 ? $("panel").offsetWidth + 32 : 16, 16],
-      paddingBottomRight: [16, 130],
+      // the carbon card on the right takes room too, when it is shown and open
+      paddingBottomRight: [CARBON && state.mode === "explore" && window.innerWidth > 760 ? 280 + 32 : 16, 130],
     });
     map.fitBounds(bounds, padding());
     // Until the user moves the map (or Learn flies somewhere), keep the whole study area in view when
@@ -416,6 +418,7 @@
 
     // ------------------------------------------------------------------- left card
     $("panel-toggle").onclick = () => { state.open = !state.open; render(); };
+    $("carbon-toggle").onclick = () => { state.carbonOpen = !state.carbonOpen; render(); };
     $("layers").onclick = (e) => {
       const b = e.target.closest(".layer");
       if (b && !b.disabled) setLayer(b.dataset.id);
@@ -443,6 +446,7 @@
       $("panel-mini").innerHTML = learn || !layer.band ? ""
         : `<i style="background:${cssRamp(PALETTES[layer.band.pal])}"></i>${esc(layer.name)}`;
       $("layers").hidden = learn;
+      $("carbon-card").hidden = learn || !CARBON;
       $("learn").hidden = !learn;
       if (learn || panelKey === state.layer) return;      // rebuild the list only when the choice changed
       panelKey = state.layer;
@@ -595,6 +599,7 @@
       handle.setAttribute("aria-valuetext", fmtDateLong(cur.date));
       $("tl-ref").hidden = !pair;
       if (pair) $("tl-ref").style.left = `${pos(list[state.ref].date)}%`;
+      if (CARBON) renderCarbon();
       stopsEl.querySelectorAll(".tl-stop").forEach((b, i) => {
         b.classList.toggle("is-sel", i === state.idx);
         b.classList.toggle("is-ref", pair && i === state.ref);
@@ -618,6 +623,66 @@
     const dropIdx = AREA ? AREA.mean.findIndex((v, i) => i > baseIdx && v < areaPre - THR) : -1;
     const lossPct = (db) => Math.round((1 - Math.pow(10, -db / 10)) * 100);
     const PITCH_HA = 0.714;                    // one football pitch, 105 m x 68 m
+
+    // ------------------------------------------------------------------- carbon (Explore card, carbon.js)
+    /* Stock from NASA GEDI L4B biomass, converted with IPCC factors (scripts/make_carbon.py). The fire part uses
+     * the NISAR damage area: what stood there, and the yearly uptake that is missing until the forest regrows.
+     * The recovery bars are measured: the canopy echo of the damaged area per radar date, in % of before the fire. */
+    const fmtCO2 = (t) => (t >= 1e6 ? `${(t / 1e6).toFixed(1)} Mt` : t >= 1e4 ? `${Math.round(t / 1e3).toLocaleString("en-US")} kt`
+      : `${Math.round(t).toLocaleString("en-US")} t`);
+    function renderCarbon() {
+      const el = $("carbon"), now = $("carbon-now");
+      if (!CARBON) { el.innerHTML = now.innerHTML = ""; return; }
+      const b = CARBON.box, d = CARBON.damaged, by = CARBON.by_date || {};
+      const list = scenes();
+      // radar date for a shown date (moisture has its own dates: take the nearest radar date)
+      const rIdx = (i) => (list === radar ? i : nearest(radar, list[i].date));
+      const ri = rIdx(state.idx), rd = radar[ri];
+      const at = (r) => by[radar[r].date] || { co2_t: 0, loss_ha: 0 };
+      const signed = (t) => `${t < 0 ? "−" : "+"}${fmtCO2(Math.abs(t))}`;
+      const near = list === radar || list[state.idx].date === rd.date ? "" : ` (nearest radar image)`;
+
+      // ---- visible: only the number for the shown date, or the change between the two compared dates.
+      // What it means (date, hectares) is the first thing in the details.
+      let what;
+      if (comparing()) {
+        const rF = rIdx(Math.min(state.idx, state.ref)), rT = rIdx(Math.max(state.idx, state.ref));
+        const dIntact = -(at(rT).co2_t - at(rF).co2_t), dHa = at(rT).loss_ha - at(rF).loss_ha;
+        now.innerHTML = `<p class="c-big ${dIntact < 0 ? "loss" : ""}">${signed(dIntact)} CO₂</p>`;
+        what = `<p class="c-lead">Change in forest with an intact canopy, ${fmtDate(radar[rF].date)} → ${fmtDate(radar[rT].date)}:
+          ${dHa >= 0 ? "+" : "−"}${fmtNum(Math.abs(dHa))} ha where the canopy echo dropped.</p>`;
+      } else {
+        const lost = at(ri);
+        now.innerHTML = `<p class="c-big">${fmtCO2(b.co2_t - lost.co2_t)} CO₂</p>`;
+        what = `<p class="c-lead">In forest with an intact canopy on ${fmtDate(rd.date)}${near}.
+          ${rd.date === CARBON.baseline ? "This is the last image before the fire, the reference."
+            : `<span class="${lost.co2_t > 0 ? "loss" : ""}">${signed(-lost.co2_t)} since ${fmtDate(CARBON.baseline)}, ${fmtNum(lost.loss_ha)} ha with canopy loss.</span>`}</p>`;
+      }
+
+      // ---- details (folded): what the number means, the totals, lost uptake, recovery, sources
+      $("carbon-toggle").setAttribute("aria-expanded", String(state.carbonOpen));
+      $("carbon-more").textContent = state.carbonOpen ? "Less" : "Details";
+      let rec = "";
+      if (d && AREA) {
+        rec = dayNum(rd.date) <= fireEnd
+          ? `<p class="c-note">${fmtDate(rd.date)} is before the fire${dayNum(rd.date) >= fireStart ? " ends" : ""}. Move the date to see the recovery.</p>`
+          : `<p class="c-note"><strong>${areaPct(ri)} %</strong> of the canopy echo before the fire on ${fmtDate(rd.date)}. 100 % means the tree crowns are back, not yet the biomass.</p>`;
+      }
+      el.innerHTML = `${what}
+        <p class="c-note">The number above is the CO₂ stored in all trees of this area (NASA GEDI biomass) minus the CO₂ stored
+          where the Change layer is red on that date: the canopy echo dropped more than ${THR} dB since ${fmtDate(CARBON.baseline)}.
+          It is the stock standing there, not the emission: only part of it burns.</p>
+        <div class="c-row"><span class="c-mid">${fmtCO2(b.co2_t)} CO₂</span>
+          <span class="c-sub">in all trees of this area before the fire (± ${fmtCO2(b.co2_se_t)}), ${fmtNum(b.mean_agbd_t_ha)} t biomass per ha</span></div>
+        ${d ? `<div class="c-row"><span class="c-mid">${fmtCO2(d.co2_t)} CO₂</span>
+          <span class="c-sub">in the lasting damage area (${fmtNum(d.area_ha)} ha, low in almost every image after the fire)</span></div>
+        <div class="c-row"><span class="c-mid">≈ ${fmtCO2(d.lost_uptake_co2_t_yr)} CO₂ / year</span>
+          <span class="c-sub">no longer taken up there until the forest grows back</span></div>
+        ${REGION.damageCaveat ? `<p class="c-note c-warn">${esc(REGION.damageCaveat)}</p>` : ""}
+        <p class="c-label">Recovery: canopy echo of the damaged area, % of normal</p>
+        ${AREA ? areaBars(ri) : ""}${rec}` : ""}
+        <p class="c-src">Biomass: NASA GEDI (1 km, before 2026). Factors: IPCC. More under About.</p>`;
+    }
 
     /** Bars: echo of the damaged area per date, in % of normal. */
     function areaBars(cur) {
@@ -971,6 +1036,7 @@
           passes over every 12 days and measures the ground with radar, through clouds and smoke. This map shows
           what it saw before and after. Built for the NASA Space Apps Challenge 2026, challenge "Dancing with the SARs".</p>
         <p style="margin-top:8px">Study area: ${esc(REGION.title || REGION.name)}.</p>
+        ${REGION.damageCaveat ? `<p style="margin-top:8px"><strong>Note:</strong> ${esc(REGION.damageCaveat)}</p>` : ""}
 
         <h3>The layers</h3>
         <ul>
@@ -991,6 +1057,26 @@
             ? `${moist.scenes.length} scenes, ${esc(moist.quality || "")}. It is soil moisture, not fuel moisture.`
             : `not exported yet. Run <code>forest_watch_api/scripts/sme2_layers.py</code> with an Earthdata login.`}</li>
         </ul>
+
+        ${CARBON ? `<h3>Carbon</h3>
+        <ul>
+          <li>Biomass: ${esc(CARBON.source)}. Mean above-ground biomass density of the GEDI mission years before 2026, with a
+            standard error per 1 km cell; ${CARBON.gedi_cells} cells touch this area. It does not see the 2026 fire.</li>
+          <li>Stock = biomass density × area of each radar pixel; carbon = ${CARBON.carbon_fraction} × biomass
+            (${esc(CARBON.carbon_fraction_source)}); CO₂ = carbon × 44/12. The ± adds the cell errors as if fully correlated (an upper bound).</li>
+          <li>Per date (the number on the map card): the stock in all trees minus the stock where the forest echo is more than
+            ${THR} dB below ${fmtDateLong(CARBON.baseline)} on that date (${esc(CARBON.loss_rule || "")}), so the red of the Change layer.
+            In compare mode the card shows the difference between the two dates. Single images are noisy: before the fire this
+            already flags some hectares.</li>
+          ${CARBON.damaged ? `<li>"Stood in the damaged forest" is the stock inside the lasting damage area found with NISAR. It is not the emission of
+            the fire: only part of the biomass burns, the rest decays over years or is cleared.</li>
+          <li>Lost uptake = damaged area × ${CARBON.growth_t_dm_ha_yr} t dry matter per ha and year × ${CARBON.carbon_fraction} × 44/12
+            (${esc(CARBON.growth_source)}). A rough default for natural forest, not a measurement of this forest; plantations
+            and young stands grow differently.</li>
+          <li>Recovery is measured: the canopy echo (HV) of the damaged area per NISAR date. Back at 100 % means the crowns are back,
+            which is not the same as the biomass being back.</li>` : ""}
+          <li>Above-ground live biomass only: roots, dead wood and soil carbon are not included.</li>
+        </ul>` : ""}
 
         <h3>Data</h3>
         <p>NISAR Level-2 GCOV (L-band), provisional products, from the Alaska Satellite Facility DAAC
